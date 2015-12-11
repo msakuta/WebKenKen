@@ -293,10 +293,11 @@
 			answers.style.fontSize = '25px';
 			answers.style.padding = '10px';
 			answers.innerHTML = 'Ans: ';
-			for(var i = 0; i < size; i++){
+
+			function addAnswer(str){
 				var a = document.createElement('span');
 				answers.appendChild(a);
-				a.innerHTML = (i + 1).toString();
+				a.innerHTML = str;
 				a.style.marginRight = '10px';
 				a.style.border = '1px solid blue';
 				a.style.padding = '5px';
@@ -306,8 +307,13 @@
 						valueDiv.style.display = 'block';
 						valueDiv.innerHTML = this.innerHTML;
 					}
-				}
+				};
 			}
+
+			for(var i = 0; i < size; i++){
+				addAnswer((i + 1).toString());
+			}
+			addAnswer('&nbsp;');
 
 			var memoContainer = document.createElement('div');
 			container.appendChild(memoContainer);
