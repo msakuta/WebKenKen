@@ -175,35 +175,57 @@
 			function growCells(type, region){
 				function growCellSingle(x, y, type, region, cells){
 					allTries++;
-					if(2 <= cells && Math.random() < 0.5 || 3 <= cells){
-						var ret = growCells(type, region);
-						if(ret)
-							return ret;
-						paintCells(region);
-					}
 					var next = region.slice(0);
-					next[x + y * size] = type;
-					paintCells(next);
-					var deltax = [-1, 0, 1, 0];
-					var deltay = [0, -1, 0, 1];
 					var avail = [];
-					for(var i = 0; i < 4; i++){
-						var newx = x + deltax[i];
-						var newy = y + deltay[i];
-						if(newx < 0 || size <= newx || newy < 0 || size <= newy)
-							continue;
-						if(region[newx + newy * size])
-							continue;
-						avail.push([newx, newy]);
+					if(2 <= cells){
+						avail.push({func: function(){
+							var ret = growCells(type, region);
+							if(ret)
+								return ret;
+							paintCells(region);
+						}, data: null,
+						weight: 3}); // Prioritize small regions by weighting option for creating new regions
 					}
+					next[x + y * size] = type;
+					if(cells < 3){
+						var deltax = [-1, 0, 1, 0];
+						var deltay = [0, -1, 0, 1];
+						for(var i = 0; i < 4; i++){
+							var newx = x + deltax[i];
+							var newy = y + deltay[i];
+							if(newx < 0 || size <= newx || newy < 0 || size <= newy)
+								continue;
+							if(region[newx + newy * size])
+								continue;
+							avail.push({func: function(data){
+								paintCells(next);
+								return growCellSingle(data[0], data[1], type, next, cells + 1);
+								},
+								data: [newx, newy],
+								weight: 1});
+						}
+					}
+
+					// Backtrack all available options recursively
 					while(avail.length){
-						var index = Math.floor(Math.random() * avail.length);
-						var newx = avail[index][0];
-						var newy = avail[index][1];
-						var ret = growCellSingle(newx, newy, type, next, cells + 1);
-						if(ret)
-							return ret;
-						avail.splice(index, 1);
+						// Options have weights, so we first measure total weight
+						var allWeight = 0;
+						for(var j = 0; j < avail.length; j++)
+							allWeight += avail[j].weight;
+						// Obtain value for selecting an option
+						var val = Math.random() * allWeight;
+						// Accumulate weights and find the corresponding option
+						allWeight = 0;
+						for(var j = 0; j < avail.length; j++){
+							allWeight += avail[j].weight;
+							if(val < allWeight){
+								ret = avail[j].func(avail[j].data);
+								if(ret)
+									return ret;
+								avail.splice(j, 1);
+								break;
+							}
+						}
 					}
 					// At least 2 cells are required
 					if(cells < 1)
