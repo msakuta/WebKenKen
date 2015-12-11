@@ -33,11 +33,20 @@
 	</head>
 	<body>
 		<h1>WebKenKen</h1>
+		Size:
+		<select id="sizeSelect">
+			<option selected>3</option>
+			<option>4</option>
+			<option>5</option>
+			<option>6</option>
+		</select>
+		<input type="button" onclick="generateBoard()" value="Create"></input>
 		<input type="button" onclick="solve()" value="Solve"></input>
 		<input type="button" onclick="hide()" value="Hide"></input>
 		<div id="container"></div>
 
 		<script>
+		var container;
 		var table;
 		var size = 3;
 		var board = new Array(size * size);
@@ -70,7 +79,21 @@
 		}
 
 		window.onload = function(){
-			var container = document.getElementById("container");
+			generateBoard();
+		}
+
+		function generateBoard(){
+			var sizeStr = document.getElementById("sizeSelect").value;
+			size = parseInt(sizeStr);
+
+			// The containers are nested so that the inner container can be easily
+			// discarded to recreate the whole game.
+			var outerContainer = document.getElementById("container");
+			if(container)
+				outerContainer.removeChild(container);
+			container = document.createElement("div");
+			outerContainer.appendChild(container);
+
 			table = document.createElement("table");
 			table.border = '1px';
 			table.style.borderColor = 'red';
