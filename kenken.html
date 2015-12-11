@@ -103,8 +103,8 @@
 			table.style.borderSpacing = '2px';
 			table.style.tableLayout = 'fixed';
 			table.style.position = 'relative';
-			table.style.width = (size * 4.5 + 0.4) + 'em';
-			table.style.height = (size * 4.5 + 0.4) + 'em';
+			table.style.width = (size * 4. + 0.4) + 'em';
+			table.style.height = (size * 4. + 0.4) + 'em';
 			var latinSquareTries = 0;
 			for(var iy = 0; iy < size; iy++){
 				for(var tries = 0; tries < 1000; tries++){
@@ -243,11 +243,11 @@
 					var cell = document.createElement("td");
 					cell.innerHTML = "";
 					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
-					cell.style.width = '4em';
-					cell.style.height = '4em';
+					cell.style.width = '3.5em';
+					cell.style.height = '3.5em';
 					cell.style.position = 'absolute';
-					cell.style.top = (4.5 * iy + 0.2) + 'em';
-					cell.style.left = (4.5 * ix + 0.2) + 'em';
+					cell.style.top = (4.0 * iy + 0.2) + 'em';
+					cell.style.left = (4.0 * ix + 0.2) + 'em';
 					cell.style.verticalAlign = 'middle';
 					cell.onclick = function(){
 						selectCell(this);
@@ -269,7 +269,7 @@
 
 					var memoElem = document.createElement("div");
 					memoElem.id = 'memo_r' + iy + 'c' + ix;
-					memoElem.style.fontSize = '15px';
+					memoElem.style.fontSize = '12px';
 					memoElem.style.position = 'relative';
 					memoElem.style.top = '100%';
 					memoElem.style.marginTop = '-1em';
