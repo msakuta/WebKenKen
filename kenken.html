@@ -33,20 +33,48 @@
 	</head>
 	<body>
 		<h1>WebKenKen</h1>
+		<input type="button" onclick="solve()" value="Solve"></input>
+		<input type="button" onclick="hide()" value="Hide"></input>
 		<div id="container"></div>
 
 		<script>
+		var table;
+		var size = 3;
+		var board = new Array(size * size);
+		var region = new Array(size * size);
+
+		function iterateCells(func){
+			for(var iy = 0; iy < size; iy++){
+				for(var ix = 0; ix < size; ix++){
+					func(ix, iy);
+				}
+			}
+		}
+
+		function solve(){
+			iterateCells(function(ix, iy){
+				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				valueDiv.style.display = 'block';
+			});
+		}
+
+		function hide(){
+			iterateCells(function(ix, iy){
+				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				valueDiv.style.display = 'none';
+			});
+		}
 
 		window.onload = function(){
 			var container = document.getElementById("container");
-			var table = document.createElement("table");
-			var size = 3;
-			var board = new Array(size * size);
-			var region = new Array(size * size);
+			table = document.createElement("table");
 			table.border = '1px';
 			table.style.borderColor = 'red';
 			table.style.borderSpacing = '2px';
 			table.style.tableLayout = 'fixed';
+			table.style.position = 'relative';
+			table.style.width = (size * 5.5 + 0.4) + 'em';
+			table.style.height = (size * 5.5 + 0.4) + 'em';
 			var latinSquareTries = 0;
 			for(var iy = 0; iy < size; iy++){
 				for(var tries = 0; tries < 1000; tries++){
@@ -163,26 +191,33 @@
 				}
 			}
 
+			container.appendChild(table);
 			for(var iy = 0; iy < size; iy++){
 				var row = document.createElement("tr");
+				table.appendChild(row);
 				for(var ix = 0; ix < size; ix++){
 					var cell = document.createElement("td");
-					cell.innerHTML = /*ix.toString() + ',' + iy.toString()*/
-					 + board[ix + iy * size];
+					cell.innerHTML = "";
 					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
 					cell.style.width = '5em';
 					cell.style.height = '5em';
+					cell.style.position = 'absolute';
+					cell.style.top = (5.5 * iy + 0.2) + 'em';
+					cell.style.left = (5.5 * ix + 0.2) + 'em';
+					cell.style.verticalAlign = 'middle';
+					var valueDiv = document.createElement("div");
+					valueDiv.id = 'r' + iy + 'c' + ix;
+					valueDiv.style.fontSize = '30px';
+					valueDiv.style.position = 'absolute';
+					valueDiv.style.top = '50%';
+					valueDiv.style.width = '100%';
+					valueDiv.style.textAlign = 'center';
+					valueDiv.innerHTML = board[ix + iy * size];
+					cell.appendChild(valueDiv);
 					row.appendChild(cell);
-				}
-				table.appendChild(row);
-			}
-			container.appendChild(table);
-
-			function iterateCells(func){
-				for(var iy = 0; iy < size; iy++){
-					for(var ix = 0; ix < size; ix++){
-						func(ix, iy);
-					}
+					var r = valueDiv.getBoundingClientRect();
+					valueDiv.style.marginTop = (-r.height / 2) + 'px';
+					valueDiv.style.display = 'none';
 				}
 			}
 
@@ -215,7 +250,11 @@
 								product *= board[ix + iy * size];
 						}
 					});
-					topLeftCell.innerHTML = '[' + i + ']' + product + avail[index] + '<br>' + board[left + top * size];
+					var hint = document.createElement('div');
+					hint.innerHTML = product + avail[index];
+					hint.style.position = 'absolute';
+					hint.style.top = '0px';
+					topLeftCell.appendChild(hint);
 				}
 			}
 
