@@ -54,6 +54,7 @@
 		var memos;
 		var selectedCell = null;
 		var selectedCoords = null;
+		var messageElem;
 
 		function iterateCells(func){
 			for(var iy = 0; iy < size; iy++){
@@ -76,6 +77,19 @@
 				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
 				valueDiv.style.display = 'none';
 			});
+		}
+
+		function checkAnswer(){
+			var correct = true;
+			iterateCells(function(ix, iy){
+				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				// String based comparison because valueDiv may contain whitespace
+				if(board[ix + iy * size].toString() !== valueDiv.innerHTML)
+					correct = false;
+			});
+			if(correct){
+				messageElem.innerHTML = "Congratulations!<br>You've solved the puzzle!";
+			}
 		}
 
 		window.onload = function(){
@@ -279,6 +293,13 @@
 				})
 			}
 
+			messageElem = document.createElement('div');
+			container.appendChild(messageElem);
+			messageElem.style.fontFamily = 'Sans-serif';
+			messageElem.style.fontSize = '20pt';
+			messageElem.style.position = 'relative';
+			messageElem.style.color = 'red';
+
 			container.appendChild(table);
 			for(var iy = 0; iy < size; iy++){
 				var row = document.createElement("tr");
@@ -305,7 +326,7 @@
 					valueDiv.style.top = '50%';
 					valueDiv.style.width = '100%';
 					valueDiv.style.textAlign = 'center';
-					valueDiv.innerHTML = board[ix + iy * size];
+					valueDiv.innerHTML = '&nbsp;';
 					cell.appendChild(valueDiv);
 					var r = valueDiv.getBoundingClientRect();
 					valueDiv.style.marginTop = (-r.height / 2) + 'px';
@@ -394,6 +415,7 @@
 						var valueDiv = document.getElementById('r' + selectedCoords[1] + 'c' + selectedCoords[0]);
 						valueDiv.style.display = 'block';
 						valueDiv.innerHTML = this.innerHTML;
+						checkAnswer();
 					}
 				};
 			}
