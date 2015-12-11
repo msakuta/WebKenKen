@@ -284,30 +284,46 @@
 				region = ret;
 				paintCells(region);
 				for(var i = 1; i < 100; i++){
-					var count = 0;
 					var topLeftCell = null;
 					var top, left;
+					var first;
+					var cellValues = [];
 					iterateCells(function(ix, iy){
 						if(region[ix + iy * size] === i){
-							if(count === 0)
+							if(cellValues.length === 0){
 								topLeftCell = table.children[top = iy].children[left = ix];
-							count++;
+								first = board[ix + iy * size];
+							}
+							cellValues.push(board[ix + iy * size]);
 						}
 					});
-					if(count === 0)
+					if(cellValues.length === 0)
 						break;
 					var avail = ['*', '+'];
+					if(cellValues.length === 2)
+						avail.push('-');
+					// If numbers are not dividable to each other, we can't use it for division operator
+					if(cellValues.length === 2 && (cellValues[0] % cellValues[1] === 0 || cellValues[1] % cellValues[0] === 0))
+						avail.push('/');
 					var index = Math.floor(Math.random() * avail.length);
 					var oper = avail[index];
-					var product = oper === '+' ? 0 : 1;
-					iterateCells(function(ix, iy){
-						if(region[ix + iy * size] === i){
-							if(oper === '+')
-								product += board[ix + iy * size];
-							else
-								product *= board[ix + iy * size];
-						}
-					});
+					var product;
+					if(oper === '+'){
+						product = 0;
+						for(var j = 0; j < cellValues.length; j++)
+							product += cellValues[j];
+					}
+					else if(oper === '*'){
+						product = 1;
+						for(var j = 0; j < cellValues.length; j++)
+							product *= cellValues[j];
+					}
+					else if(oper === '-'){
+						product = Math.abs(cellValues[1] - cellValues[0]);
+					}
+					else if(oper === '/'){
+						product = cellValues[0] < cellValues[1] ? cellValues[1] / cellValues[0] : cellValues[0] / cellValues[1];
+					}
 					var hint = document.createElement('div');
 					hint.innerHTML = product + avail[index];
 					hint.style.position = 'absolute';
