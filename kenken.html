@@ -42,6 +42,8 @@
 		var size = 3;
 		var board = new Array(size * size);
 		var region = new Array(size * size);
+		var selectedCell = null;
+		var selectedCoords = null;
 
 		function iterateCells(func){
 			for(var iy = 0; iy < size; iy++){
@@ -54,6 +56,7 @@
 		function solve(){
 			iterateCells(function(ix, iy){
 				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				valueDiv.innerHTML = board[ix + iy * size];
 				valueDiv.style.display = 'block';
 			});
 		}
@@ -191,6 +194,18 @@
 				}
 			}
 
+			function selectCell(sel){
+				selectedCell = sel;
+				iterateCells(function(ix, iy){
+					if(table.children[iy].children[ix] === sel){
+						table.children[iy].children[ix].style.border = '2px blue solid';
+						selectedCoords = [ix, iy];
+					}
+					else
+						table.children[iy].children[ix].style.border = '1px black solid';
+				})
+			}
+
 			container.appendChild(table);
 			for(var iy = 0; iy < size; iy++){
 				var row = document.createElement("tr");
@@ -205,6 +220,9 @@
 					cell.style.top = (5.5 * iy + 0.2) + 'em';
 					cell.style.left = (5.5 * ix + 0.2) + 'em';
 					cell.style.verticalAlign = 'middle';
+					cell.onclick = function(){
+						selectCell(this);
+					}
 					var valueDiv = document.createElement("div");
 					valueDiv.id = 'r' + iy + 'c' + ix;
 					valueDiv.style.fontSize = '30px';
@@ -220,6 +238,8 @@
 					valueDiv.style.display = 'none';
 				}
 			}
+
+			selectCell(null);
 
 			var ret = growCells(0, region);
 			if(ret){
@@ -255,6 +275,27 @@
 					hint.style.position = 'absolute';
 					hint.style.top = '0px';
 					topLeftCell.appendChild(hint);
+				}
+			}
+
+			var answers = document.createElement('div');
+			container.appendChild(answers);
+			answers.style.fontSize = '25px';
+			answers.style.padding = '10px';
+			answers.innerHTML = 'Ans: ';
+			for(var i = 0; i < size; i++){
+				var a = document.createElement('span');
+				answers.appendChild(a);
+				a.innerHTML = (i + 1).toString();
+				a.style.marginRight = '10px';
+				a.style.border = '1px solid blue';
+				a.style.padding = '5px';
+				a.onclick = function(){
+					if(selectedCoords){
+						var valueDiv = document.getElementById('r' + selectedCoords[1] + 'c' + selectedCoords[0]);
+						valueDiv.style.display = 'block';
+						valueDiv.innerHTML = this.innerHTML;
+					}
 				}
 			}
 
