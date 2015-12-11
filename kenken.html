@@ -42,6 +42,7 @@
 		var size = 3;
 		var board = new Array(size * size);
 		var region = new Array(size * size);
+		var memos = new Array(size * size);
 		var selectedCell = null;
 		var selectedCoords = null;
 
@@ -223,6 +224,8 @@
 					cell.onclick = function(){
 						selectCell(this);
 					}
+					row.appendChild(cell);
+
 					var valueDiv = document.createElement("div");
 					valueDiv.id = 'r' + iy + 'c' + ix;
 					valueDiv.style.fontSize = '30px';
@@ -232,10 +235,17 @@
 					valueDiv.style.textAlign = 'center';
 					valueDiv.innerHTML = board[ix + iy * size];
 					cell.appendChild(valueDiv);
-					row.appendChild(cell);
 					var r = valueDiv.getBoundingClientRect();
 					valueDiv.style.marginTop = (-r.height / 2) + 'px';
 					valueDiv.style.display = 'none';
+
+					var memoElem = document.createElement("div");
+					memoElem.id = 'memo_r' + iy + 'c' + ix;
+					memoElem.style.fontSize = '15px';
+					memoElem.style.position = 'relative';
+					memoElem.style.top = '100%';
+					memoElem.style.marginTop = '-1em';
+					cell.appendChild(memoElem);
 				}
 			}
 
@@ -295,6 +305,38 @@
 						var valueDiv = document.getElementById('r' + selectedCoords[1] + 'c' + selectedCoords[0]);
 						valueDiv.style.display = 'block';
 						valueDiv.innerHTML = this.innerHTML;
+					}
+				}
+			}
+
+			var memoContainer = document.createElement('div');
+			container.appendChild(memoContainer);
+			memoContainer.style.fontSize = '15px';
+			memoContainer.style.padding = '10px';
+			memoContainer.innerHTML = 'Memo: ';
+			for(var i = 0; i < size; i++){
+				var a = document.createElement('span');
+				memoContainer.appendChild(a);
+				a.innerHTML = (i + 1).toString();
+				a.style.marginRight = '10px';
+				a.style.border = '1px solid blue';
+				a.style.padding = '5px';
+				a.onclick = function(){
+					if(selectedCoords){
+						var memoElem = document.getElementById('memo_r' + selectedCoords[1] + 'c' + selectedCoords[0]);
+						memoElem.style.display = 'block';
+						var currentSet = memos[selectedCoords[0] + selectedCoords[1] * size] || [];
+						var idx = currentSet.indexOf(this.innerHTML);
+						if(0 <= idx)
+							currentSet.splice(idx, 1);
+						else {
+							currentSet.push(this.innerHTML);
+							currentSet.sort();
+						}
+						memos[selectedCoords[0] + selectedCoords[1] * size] = currentSet;
+						memoElem.innerHTML = '';
+						for(var j = 0; j < currentSet.length; j++)
+							memoElem.innerHTML += currentSet[j];
 					}
 				}
 			}
