@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>WebKenKen</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #000000;
+				font-family:Monospace;
+				font-size:15px;
+				text-align:center;
+
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			table, td{
+				border: 1px solid red;
+			}
+
+			table{
+				margin: 2px auto;
+			}
+
+			td{
+				width: 1em;
+				height: 1em;
+			}
+
+		</style>
+	</head>
+	<body>
+		<h1>WebKenKen</h1>
+		<div id="container"></div>
+
+		<script>
+
+		window.onload = function(){
+			var container = document.getElementById("container");
+			var table = document.createElement("table");
+			var size = 3;
+			var board = new Array(size * size);
+			var region = new Array(size * size);
+			table.border = '1px';
+			table.style.borderColor = 'red';
+			table.style.borderSpacing = '2px';
+			table.style.tableLayout = 'fixed';
+			var latinSquareTries = 0;
+			for(var iy = 0; iy < size; iy++){
+				for(var tries = 0; tries < 1000; tries++){
+					latinSquareTries++;
+					if((function(){
+						var next = board.slice(0);
+						var avail = [];
+						for(var i = 0; i < size; i++)
+							avail.push(i+1);
+						for(var ix = 0; ix < size; ix++){
+							var idx = Math.floor((Math.random() * avail.length));
+							for(var j = 0; j < iy; j++){
+								if(board[ix + j * size] === avail[idx])
+									return false;
+							}
+							next[ix + iy * size] = avail[idx];
+							avail.splice(idx, 1);
+						}
+						board = next;
+						return true;
+					})())
+						break;
+				}
+			}
+
+			var colors = [
+				'#777',
+				'#f77',
+				'#7f7',
+				'#77f',
+				'#ff7',
+				'#7ff',
+				'#f7f',
+				'#f00',
+				'#0f0',
+				'#00f',
+			]
+
+			var allTries = 0;
+
+			function paintCells(region){
+				for(var y = 0; y < size; y++){
+					for(var x = 0; x < size; x++){
+						table.children[y].children[x].style.backgroundColor = colors[region[x + y * size] % colors.length];
+					}
+				}
+			}
+
+			function growCells(type, region){
+				function growCellSingle(x, y, type, region, cells){
+					allTries++;
+					if(2 <= cells && Math.random() < 0.5 || 3 <= cells){
+						var ret = growCells(type, region);
+						if(ret)
+							return ret;
+						paintCells(region);
+					}
+					var next = region.slice(0);
+					next[x + y * size] = type;
+					paintCells(next);
+					var deltax = [-1, 0, 1, 0];
+					var deltay = [0, -1, 0, 1];
+					var avail = [];
+					for(var i = 0; i < 4; i++){
+						var newx = x + deltax[i];
+						var newy = y + deltay[i];
+						if(newx < 0 || size <= newx || newy < 0 || size <= newy)
+							continue;
+						if(region[newx + newy * size])
+							continue;
+						avail.push([newx, newy]);
+					}
+					while(avail.length){
+						var index = Math.floor(Math.random() * avail.length);
+						var newx = avail[index][0];
+						var newy = avail[index][1];
+						var ret = growCellSingle(newx, newy, type, next, cells + 1);
+						if(ret)
+							return ret;
+						avail.splice(index, 1);
+					}
+					// At least 2 cells are required
+					if(cells < 1)
+						return null;
+					return growCells(type, next);
+				}
+
+				function growCellTry(type, region){
+
+					for(var iy = 0; iy < size; iy++){
+						for(var ix = 0; ix < size; ix++){
+							if(region[ix + iy * size] === 0){
+								return growCellSingle(ix, iy, ++type, region, 0);
+							}
+						}
+					}
+					if(iy == size)
+						return region;
+				}
+
+				var numTries = 1;
+				for(var tries = 0; tries < numTries; tries++){
+					var ret = growCellTry(type, region);
+					if(ret)
+						return ret;
+				}
+				// If all tries fail, return null
+				return null;
+			}
+
+			for(var iy = 0; iy < size; iy++){
+				for(var ix = 0; ix < size; ix++){
+					region[ix + iy * size] = 0;
+				}
+			}
+
+			for(var iy = 0; iy < size; iy++){
+				var row = document.createElement("tr");
+				for(var ix = 0; ix < size; ix++){
+					var cell = document.createElement("td");
+					cell.innerHTML = /*ix.toString() + ',' + iy.toString()*/
+					 + board[ix + iy * size];
+					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
+					cell.style.width = '5em';
+					cell.style.height = '5em';
+					row.appendChild(cell);
+				}
+				table.appendChild(row);
+			}
+			container.appendChild(table);
+
+			function iterateCells(func){
+				for(var iy = 0; iy < size; iy++){
+					for(var ix = 0; ix < size; ix++){
+						func(ix, iy);
+					}
+				}
+			}
+
+			var ret = growCells(0, region);
+			if(ret){
+				region = ret;
+				paintCells(region);
+				for(var i = 1; i < 100; i++){
+					var count = 0;
+					var topLeftCell = null;
+					var top, left;
+					iterateCells(function(ix, iy){
+						if(region[ix + iy * size] === i){
+							if(count === 0)
+								topLeftCell = table.children[top = iy].children[left = ix];
+							count++;
+						}
+					});
+					if(count === 0)
+						break;
+					var avail = ['*', '+'];
+					var index = Math.floor(Math.random() * avail.length);
+					var oper = avail[index];
+					var product = oper === '+' ? 0 : 1;
+					iterateCells(function(ix, iy){
+						if(region[ix + iy * size] === i){
+							if(oper === '+')
+								product += board[ix + iy * size];
+							else
+								product *= board[ix + iy * size];
+						}
+					});
+					topLeftCell.innerHTML = '[' + i + ']' + product + avail[index] + '<br>' + board[left + top * size];
+				}
+			}
+
+			var debugText = document.createElement('div');
+			debugText.innerHTML = 'labelTries: ' + allTries.toString() + ', latinSquareTries: ' + latinSquareTries.toString();
+			container.appendChild(debugText);
+		};
+
+		</script>
+
+	</body>
+</html>
