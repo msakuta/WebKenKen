@@ -48,10 +48,10 @@
 		<script>
 		var container;
 		var table;
-		var size = 3;
-		var board = new Array(size * size);
-		var region = new Array(size * size);
-		var memos = new Array(size * size);
+		var size;
+		var board;
+		var region;
+		var memos;
 		var selectedCell = null;
 		var selectedCoords = null;
 
@@ -85,6 +85,9 @@
 		function generateBoard(){
 			var sizeStr = document.getElementById("sizeSelect").value;
 			size = parseInt(sizeStr);
+			board = new Array(size * size);
+			region = new Array(size * size);
+			memos = new Array(size * size);
 
 			// The containers are nested so that the inner container can be easily
 			// discarded to recreate the whole game.
