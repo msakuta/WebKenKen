@@ -16,19 +16,6 @@
 				overflow: hidden;
 			}
 
-			table, td{
-				border: 1px solid red;
-			}
-
-			table{
-				margin: 2px auto;
-			}
-
-			td{
-				width: 1em;
-				height: 1em;
-			}
-
 		</style>
 	</head>
 	<body>
@@ -51,6 +38,7 @@
 		var size;
 		var board;
 		var region;
+		var cellElems;
 		var memos;
 		var selectedCell = null;
 		var selectedCoords = null;
@@ -102,6 +90,7 @@
 			board = new Array(size * size);
 			region = new Array(size * size);
 			memos = new Array(size * size);
+			cellElems = new Array(size * size);
 
 			// The containers are nested so that the inner container can be easily
 			// discarded to recreate the whole game.
@@ -111,14 +100,14 @@
 			container = document.createElement("div");
 			outerContainer.appendChild(container);
 
-			table = document.createElement("table");
-			table.border = '1px';
+			table = document.createElement("div");
+			table.style.borderStyle = 'solid';
+			table.style.borderWidth = '1px';
 			table.style.borderColor = 'red';
-			table.style.borderSpacing = '2px';
-			table.style.tableLayout = 'fixed';
 			table.style.position = 'relative';
-			table.style.width = (size * 4. + 0.4) + 'em';
-			table.style.height = (size * 4. + 0.4) + 'em';
+			table.style.left = '50%';
+			table.style.width = (size * 4. + 0.1) + 'em';
+			table.style.height = (size * 4. + 0.1) + 'em';
 			var latinSquareTries = 0;
 			for(var iy = 0; iy < size; iy++){
 				for(var tries = 0; tries < 1000; tries++){
@@ -186,7 +175,7 @@
 			function paintCells(region){
 				for(var y = 0; y < size; y++){
 					for(var x = 0; x < size; x++){
-						table.children[y].children[x].style.backgroundColor = colors[region[x + y * size] % colors.length];
+						cellElems[x + y * size].style.backgroundColor = colors[region[x + y * size] % colors.length];
 					}
 				}
 			}
@@ -284,12 +273,12 @@
 			function selectCell(sel){
 				selectedCell = sel;
 				iterateCells(function(ix, iy){
-					if(table.children[iy].children[ix] === sel){
-						table.children[iy].children[ix].style.border = '2px blue solid';
+					if(cellElems[ix + iy * size] === sel){
+						cellElems[ix + iy * size].style.border = '2px blue solid';
 						selectedCoords = [ix, iy];
 					}
 					else
-						table.children[iy].children[ix].style.border = '1px black solid';
+						cellElems[ix + iy * size].style.border = '1px black solid';
 				})
 			}
 
@@ -302,10 +291,9 @@
 
 			container.appendChild(table);
 			for(var iy = 0; iy < size; iy++){
-				var row = document.createElement("tr");
-				table.appendChild(row);
 				for(var ix = 0; ix < size; ix++){
-					var cell = document.createElement("td");
+					var cell = document.createElement("div");
+					cellElems[ix + iy * size] = cell;
 					cell.innerHTML = "";
 					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
 					cell.style.width = '3.5em';
@@ -317,7 +305,7 @@
 					cell.onclick = function(){
 						selectCell(this);
 					}
-					row.appendChild(cell);
+					table.appendChild(cell);
 
 					var valueDiv = document.createElement("div");
 					valueDiv.id = 'r' + iy + 'c' + ix;
@@ -341,6 +329,8 @@
 					cell.appendChild(memoElem);
 				}
 			}
+			// Set the margin after contents are initialized
+			table.style.marginLeft = (-table.getBoundingClientRect().width / 2) + 'px';
 
 			selectCell(null);
 
@@ -356,7 +346,9 @@
 					iterateCells(function(ix, iy){
 						if(region[ix + iy * size] === i){
 							if(cellValues.length === 0){
-								topLeftCell = table.children[top = iy].children[left = ix];
+								top = iy;
+								left = ix;
+								topLeftCell = cellElems[ix + iy * size];
 								first = board[ix + iy * size];
 							}
 							cellValues.push(board[ix + iy * size]);
