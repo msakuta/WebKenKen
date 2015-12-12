@@ -113,44 +113,47 @@
 			table.style.width = (size * 4. + 0.1) + 'em';
 			table.style.height = (size * 4. + 0.1) + 'em';
 			var latinSquareTries = 0;
-			for(var iy = 0; iy < size; iy++){
-				for(var tries = 0; tries < 1000; tries++){
-					latinSquareTries++;
-					if((function(){
-						var next = board.slice(0);
-						// First, build an array of all available numbers for a row.
-						// We will randomly pick and delete from this array to enumerate permutation.
-						var avail = [];
-						for(var i = 0; i < size; i++)
-							avail.push(i+1);
-						for(var ix = 0; ix < size; ix++){
-							// Create a clone of available numbers array and delete numbers already used in column.
-							// This will greatly reduce the chance of invalid permutation, but it's not like
-							// it will never happen, so we still need to retry if permutation fails.
-							var vavail = avail.slice(0);
-							for(var j = 0; j < iy; j++){
-								var vidx = vavail.indexOf(board[ix + j * size]);
-								if(0 <= vidx)
-									vavail.splice(vidx, 1);
+
+			function genLatinSquare(){
+				for(var iy = 0; iy < size; iy++){
+					for(var tries = 0; tries < 1000; tries++){
+						latinSquareTries++;
+						if((function(){
+							var next = board.slice(0);
+							// First, build an array of all available numbers for a row.
+							// We will randomly pick and delete from this array to enumerate permutation.
+							var avail = [];
+							for(var i = 0; i < size; i++)
+								avail.push(i+1);
+							for(var ix = 0; ix < size; ix++){
+								// Create a clone of available numbers array and delete numbers already used in column.
+								// This will greatly reduce the chance of invalid permutation, but it's not like
+								// it will never happen, so we still need to retry if permutation fails.
+								var vavail = avail.slice(0);
+								for(var j = 0; j < iy; j++){
+									var vidx = vavail.indexOf(board[ix + j * size]);
+									if(0 <= vidx)
+										vavail.splice(vidx, 1);
+								}
+								// There's a possibility of using up all available numbers, in which case we should
+								// retry for this row.
+								// If we'd be sure to check every possible permutations, rather than retry with exactly
+								// the same conditions and new random numbers, we could use recursive calls to
+								// track all paths like the labeling algorithm, but it seems unnecessary around size 6.
+								if(vavail.length === 0)
+									return false;
+								var idx = Math.floor(Math.random() * vavail.length);
+								if(idx < 0)
+									return false;
+								next[ix + iy * size] = vavail[idx];
+								// The original available numbers array should always contain numbers picked from reduced array.
+								avail.splice(avail.indexOf(vavail[idx]), 1);
 							}
-							// There's a possibility of using up all available numbers, in which case we should
-							// retry for this row.
-							// If we'd be sure to check every possible permutations, rather than retry with exactly
-							// the same conditions and new random numbers, we could use recursive calls to
-							// track all paths like the labeling algorithm, but it seems unnecessary around size 6.
-							if(vavail.length === 0)
-								return false;
-							var idx = Math.floor(Math.random() * vavail.length);
-							if(idx < 0)
-								return false;
-							next[ix + iy * size] = vavail[idx];
-							// The original available numbers array should always contain numbers picked from reduced array.
-							avail.splice(avail.indexOf(vavail[idx]), 1);
-						}
-						board = next;
-						return true;
-					})())
-						break;
+							board = next;
+							return true;
+						})())
+							break;
+					}
 				}
 			}
 
@@ -218,9 +221,14 @@
 							return false;
 				}
 
+				genLatinSquare();
 				setOperators(region);
 
+				var visualizeSolveProcess = false;
+
 				function showField(x, y){
+					if(!visualizeSolveProcess)
+						return;
 					var memoElem = document.getElementById('memo_r' + y + 'c' + x);
 					memoElem.style.display = 'block';
 					memoElem.innerHTML = '';
@@ -346,6 +354,7 @@
 							// Recursively checks possible combinations for addition
 							// or multiplcation operator
 							function checkAddOper(field, j, k, sum, stop){
+								solveTries++;
 								var next = field.slice(0);
 								var jx = cellPos[j][0];
 								var jy = cellPos[j][1];
@@ -448,6 +457,15 @@
 					}
 					if(sameVector(prevField, field))
 						break;
+				}
+
+				for(var i = 0; i < size * size; i++){
+					var count = 0;
+					for(var k = 0; k < size; k++)
+						if(field[i] & (1 << k))
+							count++;
+					if(1 < count)
+						return false;
 				}
 				return true;
 			}
