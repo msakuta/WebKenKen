@@ -540,7 +540,7 @@
 							}
 						}
 					}
-					if(iy == size && checkSolvability(region))
+					if(iy == size)
 						return region;
 					else
 						return false;
@@ -694,10 +694,15 @@
 				}
 			}
 
-			var ret = growCells(0, region);
-			if(ret){
+			for(var tries = 0; tries < 100; tries++){
+				var ret = growCells(0, region);
+				if(!ret)
+					continue;
+				if(!checkSolvability(ret))
+					continue;
 				region = ret;
 				paintCells(region);
+				break;
 			}
 
 			var answers = document.createElement('div');
