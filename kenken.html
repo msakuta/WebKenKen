@@ -239,188 +239,210 @@
 						showField(ix, iy);
 					}
 				}
-				for(var i = 0; i < operators.length; i++){
-					var cellPos = [];
-					iterateCells(function(ix, iy){
-						if(region[ix + iy * size] === i + 1){
-							cellPos.push([ix, iy]);
+
+				for(var n = 0; n < 10; n++){
+					var prevField = field.slice(0);
+
+					for(var i = 0; i < operators.length; i++){
+						var cellPos = [];
+						iterateCells(function(ix, iy){
+							if(region[ix + iy * size] === i + 1){
+								cellPos.push([ix, iy]);
+							}
+						});
+						if(cellPos.length === 0)
+							break;
+						if(operators[i].oper == '*'){
+							for(var j = 0; j < size; j++){
+								if(operators[i].product % (j + 1) !== 0){
+									for(var k = 0; k < cellPos.length; k++){
+										var ix = cellPos[k][0];
+										var iy = cellPos[k][1];
+										field[ix + iy * size] &= ~(1 << j);
+										showField(ix, iy);
+									}
+								}
+							}
 						}
-					});
-					if(cellPos.length === 0)
-						break;
-					if(operators[i].oper == '*'){
-						for(var j = 0; j < size; j++){
-							if(operators[i].product % (j + 1) !== 0){
-								for(var k = 0; k < cellPos.length; k++){
-									var ix = cellPos[k][0];
-									var iy = cellPos[k][1];
-									field[ix + iy * size] &= ~(1 << j);
+						if(operators[i].oper == '/'){
+							var jx = cellPos[0][0];
+							var jy = cellPos[0][1];
+							var jfield = field[jx + jy * size];
+							var jvalid = 0;
+							var kx = cellPos[1][0];
+							var ky = cellPos[1][1];
+							var kfield = field[kx + ky * size];
+							var kvalid = 0;
+							for(var j = 0; j < size; j++){
+								if(!(jfield & (1 << j)))
+									continue;
+								for(var k = 0; k < size; k++){
+									if(!(kfield & (1 << k)))
+										continue;
+									var jv = j + 1;
+									var kv = k + 1;
+									if(jv < kv){
+										if(kv / jv === operators[i].product){
+											jvalid |= 1 << j;
+											kvalid |= 1 << k;
+										}
+									}
+									else{
+										if(jv / kv === operators[i].product){
+											jvalid |= 1 << j;
+											kvalid |= 1 << k;
+										}
+									}
+								}
+							}
+
+							jfield &= jvalid;
+							field[jx + jy * size] = jfield;
+							showField(jx, jy);
+							kfield &= kvalid;
+							field[kx + ky * size] = kfield;
+							showField(kx, ky);
+						}
+						if(operators[i].oper == '-'){
+							var jx = cellPos[0][0];
+							var jy = cellPos[0][1];
+							var jfield = field[jx + jy * size];
+							var jvalid = 0;
+							var kx = cellPos[1][0];
+							var ky = cellPos[1][1];
+							var kfield = field[kx + ky * size];
+							var kvalid = 0;
+							for(var j = 0; j < size; j++){
+								if(!(jfield & (1 << j)))
+									continue;
+								for(var k = 0; k < size; k++){
+									if(!(kfield & (1 << k)))
+										continue;
+									var jv = j + 1;
+									var kv = k + 1;
+									if(jv < kv){
+										if(kv - jv === operators[i].product){
+											jvalid |= 1 << j;
+											kvalid |= 1 << k;
+										}
+									}
+									else{
+										if(jv - kv === operators[i].product){
+											jvalid |= 1 << j;
+											kvalid |= 1 << k;
+										}
+									}
+								}
+							}
+
+							jfield &= jvalid;
+							field[jx + jy * size] = jfield;
+							showField(jx, jy);
+							kfield &= kvalid;
+							field[kx + ky * size] = kfield;
+							showField(kx, ky);
+						}
+						if(operators[i].oper == '+'){
+							// Recursively checks possible combinations for add operator
+							function checkAddOper(field, j, k, sum, stop){
+								var next = field.slice(0);
+								var jx = cellPos[j][0];
+								var jy = cellPos[j][1];
+								if(!(next[jx + jy * size] & (1 << k)))
+									return false;
+								sum += k + 1;
+								// Even before we add all cells, we are sure that
+								// sum greater than the operator's value is not possible.
+								if(operators[i].product < sum)
+									return false;
+								next[jx + jy * size] = (1 << k);
+								for(var l = 0; l < size; l++){
+									if(l !== jx)
+										next[l + jy * size] &= ~(1 << k);
+									if(l !== jy)
+										next[jx + l * size] &= ~(1 << k);
+								}
+								j = (j + 1) % cellPos.length;
+								if(j === stop)
+									return sum === operators[i].product;
+								for(var l = 0; l < size; l++){
+									var ret = checkAddOper(next, j, l, sum, stop);
+									if(ret)
+										return true;
+								}
+								return false;
+							}
+							for(var j = 0; j < cellPos.length; j++){
+								for(var l = 0; l < size; l++){
+									var ret = checkAddOper(field, j, l, 0, j);
+									var jx = cellPos[j][0];
+									var jy = cellPos[j][1];
+									if(!ret)
+										field[jx + jy * size] &= ~(1 << l);
+									showField(jx, jy);
+								}
+							}
+						}
+					}
+
+					function checkRowCell(ix, iy, k, field, axis, stop){
+						solveTries++;
+						var next = field.slice(0);
+						if(!(next[ix + iy * size] & (1 << k)))
+							return false;
+						next[ix + iy * size] = (1 << k);
+						for(var l = 0; l < size; l++){
+							if(l !== ix){
+								next[l + iy * size] &= ~(1 << k);
+								if(next[l + iy * size] === 0)
+									return false;
+							}
+							if(l !== iy){
+								next[ix + l * size] &= ~(1 << k);
+								if(next[ix + l * size] === 0)
+									return false;
+							}
+						}
+						if(axis === 0)
+							ix = (ix + 1) % size;
+						else
+							iy = (iy + 1) % size;
+						if((axis === 0 ? ix : iy) !== stop){
+							for(var l = 0; l < size; l++)
+								if(checkRowCell(ix, iy, l, next, axis, stop))
+									return true;
+							return false;
+						}
+						else {
+							return true;
+						}
+					}
+
+					for(var iy = 0; iy < size; iy++){
+						for(var ix = 0; ix < size; ix++){
+							for(var k = 0; k < size; k++){
+								var ret = checkRowCell(ix, iy, k, field, 0, ix);
+								if(!ret){
+									field[ix + iy * size] &= ~(1 << k);
 									showField(ix, iy);
 								}
 							}
 						}
 					}
-					if(operators[i].oper == '/'){
-						var jx = cellPos[0][0];
-						var jy = cellPos[0][1];
-						var jfield = field[jx + jy * size];
-						var jvalid = 0;
-						var kx = cellPos[1][0];
-						var ky = cellPos[1][1];
-						var kfield = field[kx + ky * size];
-						var kvalid = 0;
-						for(var j = 0; j < size; j++){
-							if(!(jfield & (1 << j)))
-								continue;
-							for(var k = 0; k < size; k++){
-								if(!(kfield & (1 << k)))
-									continue;
-								var jv = j + 1;
-								var kv = k + 1;
-								if(jv < kv){
-									if(kv / jv === operators[i].product){
-										jvalid |= 1 << j;
-										kvalid |= 1 << k;
-									}
-								}
-								else{
-									if(jv / kv === operators[i].product){
-										jvalid |= 1 << j;
-										kvalid |= 1 << k;
-									}
-								}
-							}
-						}
 
-						jfield &= jvalid;
-						field[jx + jy * size] = jfield;
-						showField(jx, jy);
-						kfield &= kvalid;
-						field[kx + ky * size] = kfield;
-						showField(kx, ky);
-					}
-					if(operators[i].oper == '-'){
-						var jx = cellPos[0][0];
-						var jy = cellPos[0][1];
-						var jfield = field[jx + jy * size];
-						var jvalid = 0;
-						var kx = cellPos[1][0];
-						var ky = cellPos[1][1];
-						var kfield = field[kx + ky * size];
-						var kvalid = 0;
-						for(var j = 0; j < size; j++){
-							if(!(jfield & (1 << j)))
-								continue;
-							for(var k = 0; k < size; k++){
-								if(!(kfield & (1 << k)))
-									continue;
-								var jv = j + 1;
-								var kv = k + 1;
-								if(jv < kv){
-									if(kv - jv === operators[i].product){
-										jvalid |= 1 << j;
-										kvalid |= 1 << k;
-									}
-								}
-								else{
-									if(jv - kv === operators[i].product){
-										jvalid |= 1 << j;
-										kvalid |= 1 << k;
-									}
-								}
-							}
-						}
-
-						jfield &= jvalid;
-						field[jx + jy * size] = jfield;
-						showField(jx, jy);
-						kfield &= kvalid;
-						field[kx + ky * size] = kfield;
-						showField(kx, ky);
-					}
-					if(operators[i].oper == '+'){
-						// Recursively checks possible combinations for add operator
-						function checkAddOper(field, j, k, sum, stop){
-							var next = field.slice(0);
-							var jx = cellPos[j][0];
-							var jy = cellPos[j][1];
-							if(!(next[jx + jy * size] & (1 << k)))
-								return false;
-							sum += k + 1;
-							// Even before we add all cells, we are sure that
-							// sum greater than the operator's value is not possible.
-							if(operators[i].product < sum)
-								return false;
-							next[jx + jy * size] = (1 << k);
-							for(var l = 0; l < size; l++){
-								if(l !== jx)
-									next[l + jy * size] &= ~(1 << k);
-								if(l !== jy)
-									next[jx + l * size] &= ~(1 << k);
-							}
-							j = (j + 1) % cellPos.length;
-							if(j === stop)
-								return sum === operators[i].product;
-							for(var l = 0; l < size; l++){
-								var ret = checkAddOper(next, j, l, sum, stop);
-								if(ret)
-									return true;
-							}
-							return false;
-						}
-						for(var j = 0; j < cellPos.length; j++){
-							for(var l = 0; l < size; l++){
-								var ret = checkAddOper(field, j, l, 0, j);
-								var jx = cellPos[j][0];
-								var jy = cellPos[j][1];
-								if(!ret)
-									field[jx + jy * size] &= ~(1 << l);
-								showField(jx, jy);
-							}
-						}
-					}
-				}
-
-				function checkRowCell(ix, iy, k, field, stopx){
-					solveTries++;
-					var next = field.slice(0);
-					if(!(next[ix + iy * size] & (1 << k)))
-						return false;
-					next[ix + iy * size] = (1 << k);
-					for(var l = 0; l < size; l++){
-						if(l !== ix){
-							next[l + iy * size] &= ~(1 << k);
-							if(next[l + iy * size] === 0)
-								return false;
-						}
-						if(l !== iy){
-							next[ix + l * size] &= ~(1 << k);
-							if(next[ix + l * size] === 0)
-								return false;
-						}
-					}
-					ix = (ix + 1) % size;
-					if(ix !== stopx){
-						for(var l = 0; l < size; l++)
-							if(checkRowCell(ix, iy, l, next, stopx))
-								return true;
-						return false;
-					}
-					else {
-						return true;
-					}
-				}
-
-				for(var iy = 0; iy < size; iy++){
 					for(var ix = 0; ix < size; ix++){
-						for(var k = 0; k < size; k++){
-							var ret = checkRowCell(ix, iy, k, field, ix);
-							if(!ret){
-								field[ix + iy * size] &= ~(1 << k);
-								showField(ix, iy);
+						for(var iy = 0; iy < size; iy++){
+							for(var k = 0; k < size; k++){
+								var ret = checkRowCell(ix, iy, k, field, 1, iy);
+								if(!ret){
+									field[ix + iy * size] &= ~(1 << k);
+									showField(ix, iy);
+								}
 							}
 						}
 					}
+					if(sameVector(prevField, field))
+						break;
 				}
 				return true;
 			}
