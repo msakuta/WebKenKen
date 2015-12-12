@@ -337,6 +337,47 @@
 						kfield[kx + ky * size] = kfield;
 						showField(kx, ky);
 					}
+					if(operators[i].oper == '+'){
+						// Recursively checks possible combinations for add operator
+						function checkAddOper(field, j, k, sum, stop){
+							var next = field.slice(0);
+							var jx = cellPos[j][0];
+							var jy = cellPos[j][1];
+							if(!(next[jx + jy * size] & (1 << k)))
+								return false;
+							sum += k + 1;
+							// Even before we add all cells, we are sure that
+							// sum greater than the operator's value is not possible.
+							if(operators[i].product < sum)
+								return false;
+							next[jx + jy * size] = (1 << k);
+							for(var l = 0; l < size; l++){
+								if(l !== jx)
+									next[l + jy * size] &= ~(1 << k);
+								if(l !== jy)
+									next[jx + l * size] &= ~(1 << k);
+							}
+							j = (j + 1) % cellPos.length;
+							if(j === stop)
+								return sum === operators[i].product;
+							for(var l = 0; l < size; l++){
+								var ret = checkAddOper(next, j, l, sum, stop);
+								if(ret)
+									return true;
+							}
+							return false;
+						}
+						for(var j = 0; j < cellPos.length; j++){
+							for(var l = 0; l < size; l++){
+								var ret = checkAddOper(field, j, l, 0, j);
+								var jx = cellPos[j][0];
+								var jy = cellPos[j][1];
+								if(!ret)
+									field[jx + jy * size] &= ~(1 << l);
+								showField(jx, jy);
+							}
+						}
+					}
 				}
 				return true;
 			}
