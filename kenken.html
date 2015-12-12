@@ -634,6 +634,12 @@
 
 			function setOperators(region){
 				operators = [];
+				// Clear the operator indicator before assigning one because
+				// there could be old text from rejected tries.
+				for(var i = 0; i < size * size; i++){
+					var operElem = operElems[i];
+					operElem.innerHTML = '';
+				}
 				for(var i = 1; i < 100; i++){
 					var topLeftCell = null;
 					var top, left;
