@@ -180,6 +180,41 @@
 				}
 			}
 
+			/// Check if the region definition has a duplicate row or column,
+			/// in which case it is clear that the problem cannot be solved
+			/// with single answer.  You could swap these rows or columns to
+			/// obtain another solution.
+			/// Not having a duplicate row or column does not mean it is
+			/// solvable, though.  This is dirty heuristic to quickly discard
+			/// obviously bad problems.
+			function checkSolvability(region){
+				function sameVector(a,b){
+					for(var i = 0; i < a.length; i++)
+						if(a[i] !== b[i])
+							return false;
+					return true;
+				}
+				function columnVector(region, x){
+					var ret = [];
+					for(var i = 0; i < size; i++)
+						ret.push(region[x + i * size]);
+					return ret;
+				}
+				for(var iy = 0; iy < size; iy++){
+					var row = region.slice(iy * size, (iy + 1) * size);
+					for(var jy = iy + 1; jy < size; jy++)
+						if(sameVector(row, region.slice(jy * size, (jy + 1) * size)))
+							return false;
+				}
+				for(var ix = 0; ix < size; ix++){
+					var col = columnVector(region, ix);
+					for(var jx = ix + 1; jx < size; jx++)
+						if(sameVector(col, columnVector(region, jx)))
+							return false;
+				}
+				return true;
+			}
+
 			function growCells(type, region){
 				function growCellSingle(x, y, type, region, cells){
 					allTries++;
@@ -250,8 +285,10 @@
 							}
 						}
 					}
-					if(iy == size)
+					if(iy == size && checkSolvability(region))
 						return region;
+					else
+						return false;
 				}
 
 				var numTries = 1;
