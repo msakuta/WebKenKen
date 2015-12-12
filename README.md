@@ -8,7 +8,7 @@ runs with annoying ads and requires Flash, which sucks.
 Even the smartphone app versions require credential information, which shouldn't
 be really necessary for such simple puzzle game.
 
-So I decided to create a very lightweight clone of the game entirely written by JavaScript.
+So I decided to create a very lightweight clone of the game entirely written with JavaScript.
 
 Try it now on your browser!
 
