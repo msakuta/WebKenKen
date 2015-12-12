@@ -39,6 +39,8 @@
 		var board;
 		var region;
 		var cellElems;
+		var operElems;
+		var operators;
 		var memos;
 		var selectedCell = null;
 		var selectedCoords = null;
@@ -91,6 +93,8 @@
 			region = new Array(size * size);
 			memos = new Array(size * size);
 			cellElems = new Array(size * size);
+			operElems = new Array(size * size);
+			operators = [];
 
 			// The containers are nested so that the inner container can be easily
 			// discarded to recreate the whole game.
@@ -211,6 +215,128 @@
 					for(var jx = ix + 1; jx < size; jx++)
 						if(sameVector(col, columnVector(region, jx)))
 							return false;
+				}
+
+				setOperators(region);
+
+				function showField(x, y){
+					var memoElem = document.getElementById('memo_r' + y + 'c' + x);
+					memoElem.style.display = 'block';
+					memoElem.innerHTML = '';
+					for(var i = 0; i < size; i++)
+						if(field[x + y * size] & (1 << i))
+							memoElem.innerHTML += (i + 1).toString();
+				}
+
+				var field = new Array(size * size);
+				for(var iy = 0; iy < size; iy++){
+					for(var ix = 0; ix < size; ix++){
+						var currentSet = 0;
+						for(var i = 0; i < size; i++)
+							currentSet |= 1 << i;
+						field[ix + iy * size] = currentSet;
+						showField(ix, iy);
+					}
+				}
+				for(var i = 0; i < operators.length; i++){
+					var cellPos = [];
+					iterateCells(function(ix, iy){
+						if(region[ix + iy * size] === i + 1){
+							cellPos.push([ix, iy]);
+						}
+					});
+					if(cellPos.length === 0)
+						break;
+					if(operators[i].oper == '*'){
+						for(var j = 0; j < size; j++){
+							if(operators[i].product % (j + 1) !== 0){
+								for(var k = 0; k < cellPos.length; k++){
+									var ix = cellPos[k][0];
+									var iy = cellPos[k][1];
+									field[ix + iy * size] &= ~(1 << j);
+									showField(ix, iy);
+								}
+							}
+						}
+					}
+					if(operators[i].oper == '/'){
+						var jx = cellPos[0][0];
+						var jy = cellPos[0][1];
+						var jfield = field[jx + jy * size];
+						var jvalid = 0;
+						var kx = cellPos[1][0];
+						var ky = cellPos[1][1];
+						var kfield = field[kx + ky * size];
+						var kvalid = 0;
+						for(var j = 0; j < size; j++){
+							if(!(jfield & (1 << j)))
+								continue;
+							for(var k = 0; k < size; k++){
+								if(!(kfield & (1 << k)))
+									continue;
+								var jv = j + 1;
+								var kv = k + 1;
+								if(jv < kv){
+									if(kv / jv === operators[i].product){
+										jvalid |= 1 << j;
+										kvalid |= 1 << k;
+									}
+								}
+								else{
+									if(jv / kv === operators[i].product){
+										jvalid |= 1 << j;
+										kvalid |= 1 << k;
+									}
+								}
+							}
+						}
+
+						jfield &= jvalid;
+						field[jx + jy * size] = jfield;
+						showField(jx, jy);
+						kfield &= kvalid;
+						kfield[kx + ky * size] = kfield;
+						showField(kx, ky);
+					}
+					if(operators[i].oper == '-'){
+						var jx = cellPos[0][0];
+						var jy = cellPos[0][1];
+						var jfield = field[jx + jy * size];
+						var jvalid = 0;
+						var kx = cellPos[1][0];
+						var ky = cellPos[1][1];
+						var kfield = field[kx + ky * size];
+						var kvalid = 0;
+						for(var j = 0; j < size; j++){
+							if(!(jfield & (1 << j)))
+								continue;
+							for(var k = 0; k < size; k++){
+								if(!(kfield & (1 << k)))
+									continue;
+								var jv = j + 1;
+								var kv = k + 1;
+								if(jv < kv){
+									if(kv - jv === operators[i].product){
+										jvalid |= 1 << j;
+										kvalid |= 1 << k;
+									}
+								}
+								else{
+									if(jv - kv === operators[i].product){
+										jvalid |= 1 << j;
+										kvalid |= 1 << k;
+									}
+								}
+							}
+						}
+
+						jfield &= jvalid;
+						field[jx + jy * size] = jfield;
+						showField(jx, jy);
+						kfield &= kvalid;
+						kfield[kx + ky * size] = kfield;
+						showField(kx, ky);
+					}
 				}
 				return true;
 			}
@@ -344,6 +470,12 @@
 					}
 					table.appendChild(cell);
 
+					var operElem = document.createElement('div');
+					operElem.style.position = 'absolute';
+					operElem.style.top = '0px';
+					cell.appendChild(operElem);
+					operElems[ix + iy * size] = operElem;
+
 					var valueDiv = document.createElement("div");
 					valueDiv.id = 'r' + iy + 'c' + ix;
 					valueDiv.style.fontSize = '30px';
@@ -371,10 +503,8 @@
 
 			selectCell(null);
 
-			var ret = growCells(0, region);
-			if(ret){
-				region = ret;
-				paintCells(region);
+			function setOperators(region){
+				operators = [];
 				for(var i = 1; i < 100; i++){
 					var topLeftCell = null;
 					var top, left;
@@ -418,12 +548,21 @@
 					else if(oper === '/'){
 						product = cellValues[0] < cellValues[1] ? cellValues[1] / cellValues[0] : cellValues[0] / cellValues[1];
 					}
-					var hint = document.createElement('div');
-					hint.innerHTML = product + avail[index];
-					hint.style.position = 'absolute';
-					hint.style.top = '0px';
-					topLeftCell.appendChild(hint);
+					var operElem = operElems[left + top * size];
+					operElem.innerHTML = product + avail[index];
+					operElem.style.position = 'absolute';
+					operElem.style.top = '0px';
+					operators.push({
+						oper: oper,
+						product: product,
+					})
 				}
+			}
+
+			var ret = growCells(0, region);
+			if(ret){
+				region = ret;
+				paintCells(region);
 			}
 
 			var answers = document.createElement('div');
