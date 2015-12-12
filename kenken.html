@@ -342,15 +342,19 @@
 							field[kx + ky * size] = kfield;
 							showField(kx, ky);
 						}
-						if(operators[i].oper == '+'){
-							// Recursively checks possible combinations for add operator
+						if(operators[i].oper === '+' || operators[i].oper === '*'){
+							// Recursively checks possible combinations for addition
+							// or multiplcation operator
 							function checkAddOper(field, j, k, sum, stop){
 								var next = field.slice(0);
 								var jx = cellPos[j][0];
 								var jy = cellPos[j][1];
 								if(!(next[jx + jy * size] & (1 << k)))
 									return false;
-								sum += k + 1;
+								if(operators[i].oper === '+')
+									sum += k + 1;
+								else
+									sum *= k + 1;
 								// Even before we add all cells, we are sure that
 								// sum greater than the operator's value is not possible.
 								if(operators[i].product < sum)
@@ -372,9 +376,10 @@
 								}
 								return false;
 							}
+
 							for(var j = 0; j < cellPos.length; j++){
 								for(var l = 0; l < size; l++){
-									var ret = checkAddOper(field, j, l, 0, j);
+									var ret = checkAddOper(field, j, l, operators[i].oper === '+' ? 0 : 1, j);
 									var jx = cellPos[j][0];
 									var jy = cellPos[j][1];
 									if(!ret)
