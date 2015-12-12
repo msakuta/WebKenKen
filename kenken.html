@@ -175,6 +175,7 @@
 			]
 
 			var allTries = 0;
+			var solveTries = 0;
 
 			function paintCells(region){
 				for(var y = 0; y < size; y++){
@@ -295,7 +296,7 @@
 						field[jx + jy * size] = jfield;
 						showField(jx, jy);
 						kfield &= kvalid;
-						kfield[kx + ky * size] = kfield;
+						field[kx + ky * size] = kfield;
 						showField(kx, ky);
 					}
 					if(operators[i].oper == '-'){
@@ -334,7 +335,7 @@
 						field[jx + jy * size] = jfield;
 						showField(jx, jy);
 						kfield &= kvalid;
-						kfield[kx + ky * size] = kfield;
+						field[kx + ky * size] = kfield;
 						showField(kx, ky);
 					}
 					if(operators[i].oper == '+'){
@@ -375,6 +376,48 @@
 								if(!ret)
 									field[jx + jy * size] &= ~(1 << l);
 								showField(jx, jy);
+							}
+						}
+					}
+				}
+
+				function checkRowCell(ix, iy, k, field, stopx){
+					solveTries++;
+					var next = field.slice(0);
+					if(!(next[ix + iy * size] & (1 << k)))
+						return false;
+					next[ix + iy * size] = (1 << k);
+					for(var l = 0; l < size; l++){
+						if(l !== ix){
+							next[l + iy * size] &= ~(1 << k);
+							if(next[l + iy * size] === 0)
+								return false;
+						}
+						if(l !== iy){
+							next[ix + l * size] &= ~(1 << k);
+							if(next[ix + l * size] === 0)
+								return false;
+						}
+					}
+					ix = (ix + 1) % size;
+					if(ix !== stopx){
+						for(var l = 0; l < size; l++)
+							if(checkRowCell(ix, iy, l, next, stopx))
+								return true;
+						return false;
+					}
+					else {
+						return true;
+					}
+				}
+
+				for(var iy = 0; iy < size; iy++){
+					for(var ix = 0; ix < size; ix++){
+						for(var k = 0; k < size; k++){
+							var ret = checkRowCell(ix, iy, k, field, ix);
+							if(!ret){
+								field[ix + iy * size] &= ~(1 << k);
+								showField(ix, iy);
 							}
 						}
 					}
@@ -667,7 +710,9 @@
 			}
 
 			var debugText = document.createElement('div');
-			debugText.innerHTML = 'labelTries: ' + allTries.toString() + ', latinSquareTries: ' + latinSquareTries.toString();
+			debugText.innerHTML = 'labelTries: ' + allTries.toString()
+				+ ', latinSquareTries: ' + latinSquareTries.toString()
+				+ ', solveTries: ' + solveTries;
 			container.appendChild(debugText);
 		};
 
