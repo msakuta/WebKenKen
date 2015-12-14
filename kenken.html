@@ -33,6 +33,9 @@
 		<input type="button" onclick="generateBoard()" value="Create"></input>
 		<input type="button" onclick="solve()" value="Solve"></input>
 		<input type="button" onclick="hide()" value="Hide"></input>
+		<input type="button" onclick="save()" value="Save"></input>
+		<input type="button" onclick="load()" value="Load"></input>
+		<hr>
 		<div id="container"></div>
 
 		<script>
@@ -48,6 +51,7 @@
 		var selectedCell = null;
 		var selectedCoords = null;
 		var messageElem;
+		var debugText;
 
 		function iterateCells(func){
 			for(var iy = 0; iy < size; iy++){
@@ -88,16 +92,10 @@
 		window.onload = function(){
 			generateBoard();
 		}
-
-		function generateBoard(){
-			var sizeStr = document.getElementById("sizeSelect").value;
-			size = parseInt(sizeStr);
-			board = new Array(size * size);
-			region = new Array(size * size);
-			memos = new Array(size * size);
+		
+		function createElements(){
 			cellElems = new Array(size * size);
 			operElems = new Array(size * size);
-			operators = [];
 
 			// The containers are nested so that the inner container can be easily
 			// discarded to recreate the whole game.
@@ -115,6 +113,206 @@
 			table.style.left = '50%';
 			table.style.width = (size * 4. + 0.1) + 'em';
 			table.style.height = (size * 4. + 0.1) + 'em';
+
+			messageElem = document.createElement('div');
+			container.appendChild(messageElem);
+			messageElem.style.fontFamily = 'Sans-serif';
+			messageElem.style.fontSize = '20pt';
+			messageElem.style.position = 'relative';
+			messageElem.style.color = 'red';
+
+			container.appendChild(table);
+			for(var iy = 0; iy < size; iy++){
+				for(var ix = 0; ix < size; ix++){
+					var cell = document.createElement("div");
+					cellElems[ix + iy * size] = cell;
+					cell.innerHTML = "";
+					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
+					cell.style.width = '3.5em';
+					cell.style.height = '3.5em';
+					cell.style.position = 'absolute';
+					cell.style.top = (4.0 * iy + 0.2) + 'em';
+					cell.style.left = (4.0 * ix + 0.2) + 'em';
+					cell.style.verticalAlign = 'middle';
+					cell.onclick = function(){
+						selectCell(this);
+					}
+					table.appendChild(cell);
+
+					var operElem = document.createElement('div');
+					operElem.style.position = 'absolute';
+					operElem.style.top = '0px';
+					cell.appendChild(operElem);
+					operElems[ix + iy * size] = operElem;
+
+					var valueDiv = document.createElement("div");
+					valueDiv.id = 'r' + iy + 'c' + ix;
+					valueDiv.style.fontSize = '30px';
+					valueDiv.style.position = 'absolute';
+					valueDiv.style.top = '50%';
+					valueDiv.style.width = '100%';
+					valueDiv.style.textAlign = 'center';
+					valueDiv.innerHTML = '&nbsp;';
+					cell.appendChild(valueDiv);
+					var r = valueDiv.getBoundingClientRect();
+					valueDiv.style.marginTop = (-r.height / 2) + 'px';
+					valueDiv.style.display = 'none';
+
+					var memoElem = document.createElement("div");
+					memoElem.id = 'memo_r' + iy + 'c' + ix;
+					memoElem.style.fontSize = '12px';
+					memoElem.style.position = 'relative';
+					memoElem.style.top = '100%';
+					memoElem.style.marginTop = '-1em';
+					memoElem.innerHTML = '';
+					var currentSet = memos[ix + iy * size] || [];
+					for(var j = 0; j < currentSet.length; j++)
+						memoElem.innerHTML += currentSet[j];
+					cell.appendChild(memoElem);
+				}
+			}
+			// Set the margin after contents are initialized
+			table.style.marginLeft = (-table.getBoundingClientRect().width / 2) + 'px';
+
+			var answers = document.createElement('div');
+			container.appendChild(answers);
+			answers.style.fontSize = '25px';
+			answers.style.padding = '10px';
+			answers.innerHTML = 'Ans: ';
+
+			function addAnswer(str){
+				var a = document.createElement('span');
+				answers.appendChild(a);
+				a.innerHTML = str;
+				a.style.marginRight = '10px';
+				a.style.border = '1px solid blue';
+				a.style.padding = '5px';
+				a.onclick = function(){
+					if(selectedCoords){
+						var valueDiv = document.getElementById('r' + selectedCoords[1] + 'c' + selectedCoords[0]);
+						valueDiv.style.display = 'block';
+						valueDiv.innerHTML = this.innerHTML;
+						checkAnswer();
+					}
+				};
+			}
+
+			for(var i = 0; i < size; i++){
+				addAnswer((i + 1).toString());
+			}
+			addAnswer('&nbsp;');
+
+			var memoContainer = document.createElement('div');
+			container.appendChild(memoContainer);
+			memoContainer.style.fontSize = '15px';
+			memoContainer.style.padding = '10px';
+			memoContainer.innerHTML = 'Memo: ';
+			for(var i = 0; i < size; i++){
+				var a = document.createElement('span');
+				memoContainer.appendChild(a);
+				a.innerHTML = (i + 1).toString();
+				a.style.marginRight = '10px';
+				a.style.border = '1px solid blue';
+				a.style.padding = '5px';
+				a.onclick = function(){
+					if(selectedCoords){
+						var memoElem = document.getElementById('memo_r' + selectedCoords[1] + 'c' + selectedCoords[0]);
+						memoElem.style.display = 'block';
+						var currentSet = memos[selectedCoords[0] + selectedCoords[1] * size] || [];
+						var idx = currentSet.indexOf(this.innerHTML);
+						if(0 <= idx)
+							currentSet.splice(idx, 1);
+						else {
+							currentSet.push(this.innerHTML);
+							currentSet.sort();
+						}
+						memos[selectedCoords[0] + selectedCoords[1] * size] = currentSet;
+						memoElem.innerHTML = '';
+						for(var j = 0; j < currentSet.length; j++)
+							memoElem.innerHTML += currentSet[j];
+					}
+				}
+			}
+
+			debugText = document.createElement('div');
+			container.appendChild(debugText);
+		}
+
+		function selectCell(sel){
+			selectedCell = sel;
+			iterateCells(function(ix, iy){
+				if(cellElems[ix + iy * size] === sel){
+					cellElems[ix + iy * size].style.border = '2px blue solid';
+					selectedCoords = [ix, iy];
+				}
+				else
+					cellElems[ix + iy * size].style.border = '1px black solid';
+			})
+		}
+
+		function paintCells(region){
+			var colors = [
+				'#aaa',
+				'#faa',
+				'#afa',
+				'#aaf',
+				'#ffa',
+				'#aff',
+				'#faf',
+				'#f00',
+				'#0c0',
+				'#c0c',
+				'#0ff',
+				'#07f',
+				'#0f7',
+				'#f40',
+				'#7f0',
+				'#f07',
+				'#70f',
+				'#fff',
+			];
+
+			for(var y = 0; y < size; y++){
+				for(var x = 0; x < size; x++){
+					cellElems[x + y * size].style.backgroundColor = colors[region[x + y * size] % colors.length];
+				}
+			}
+		}
+
+		function setOperatorElems(region){
+			// Clear the operator indicator before assigning one because
+			// there could be old text from rejected tries.
+			for(var i = 0; i < size * size; i++){
+				var operElem = operElems[i];
+				operElem.innerHTML = '';
+			}
+			for(var i = 0; i < operators.length; i++){
+				var top, left;
+				var first = true;
+				iterateCells(function(ix, iy){
+					if(region[ix + iy * size] === i + 1){
+						if(first){
+							top = iy;
+							left = ix;
+						}
+						first = false;
+					}
+				});
+				var operElem = operElems[left + top * size];
+				operElem.innerHTML = operators[i].product + operators[i].oper;
+				operElem.style.position = 'absolute';
+				operElem.style.top = '0px';
+			}
+		}
+
+		function generateBoard(){
+			var sizeStr = document.getElementById("sizeSelect").value;
+			size = parseInt(sizeStr);
+			board = new Array(size * size);
+			region = new Array(size * size);
+			memos = new Array(size * size);
+			operators = [];
+
 			var latinSquareTries = 0;
 
 			function genLatinSquare(){
@@ -160,37 +358,8 @@
 				}
 			}
 
-			var colors = [
-				'#aaa',
-				'#faa',
-				'#afa',
-				'#aaf',
-				'#ffa',
-				'#aff',
-				'#faf',
-				'#f00',
-				'#0c0',
-				'#c0c',
-				'#0ff',
-				'#07f',
-				'#0f7',
-				'#f40',
-				'#7f0',
-				'#f07',
-				'#70f',
-				'#fff',
-			]
-
 			var allTries = 0;
 			var solveTries = 0;
-
-			function paintCells(region){
-				for(var y = 0; y < size; y++){
-					for(var x = 0; x < size; x++){
-						cellElems[x + y * size].style.backgroundColor = colors[region[x + y * size] % colors.length];
-					}
-				}
-			}
 
 			function checkSolvability(region){
 				function sameVector(a,b){
@@ -229,6 +398,9 @@
 				// Assigning true to this variable enables the debugger to let you see
 				// the process of reducing solution possibilities by step execution.
 				var visualizeSolveProcess = false;
+
+				if(visualizeSolveProcess)
+					setOperatorElems(region);
 
 				/// The debug function to visualize the process.
 				function showField(x, y){
@@ -581,97 +753,16 @@
 				}
 			}
 
-			function selectCell(sel){
-				selectedCell = sel;
-				iterateCells(function(ix, iy){
-					if(cellElems[ix + iy * size] === sel){
-						cellElems[ix + iy * size].style.border = '2px blue solid';
-						selectedCoords = [ix, iy];
-					}
-					else
-						cellElems[ix + iy * size].style.border = '1px black solid';
-				})
-			}
-
-			messageElem = document.createElement('div');
-			container.appendChild(messageElem);
-			messageElem.style.fontFamily = 'Sans-serif';
-			messageElem.style.fontSize = '20pt';
-			messageElem.style.position = 'relative';
-			messageElem.style.color = 'red';
-
-			container.appendChild(table);
-			for(var iy = 0; iy < size; iy++){
-				for(var ix = 0; ix < size; ix++){
-					var cell = document.createElement("div");
-					cellElems[ix + iy * size] = cell;
-					cell.innerHTML = "";
-					//cell.style.backgroundColor = colors[region[ix + iy * size] % 4];
-					cell.style.width = '3.5em';
-					cell.style.height = '3.5em';
-					cell.style.position = 'absolute';
-					cell.style.top = (4.0 * iy + 0.2) + 'em';
-					cell.style.left = (4.0 * ix + 0.2) + 'em';
-					cell.style.verticalAlign = 'middle';
-					cell.onclick = function(){
-						selectCell(this);
-					}
-					table.appendChild(cell);
-
-					var operElem = document.createElement('div');
-					operElem.style.position = 'absolute';
-					operElem.style.top = '0px';
-					cell.appendChild(operElem);
-					operElems[ix + iy * size] = operElem;
-
-					var valueDiv = document.createElement("div");
-					valueDiv.id = 'r' + iy + 'c' + ix;
-					valueDiv.style.fontSize = '30px';
-					valueDiv.style.position = 'absolute';
-					valueDiv.style.top = '50%';
-					valueDiv.style.width = '100%';
-					valueDiv.style.textAlign = 'center';
-					valueDiv.innerHTML = '&nbsp;';
-					cell.appendChild(valueDiv);
-					var r = valueDiv.getBoundingClientRect();
-					valueDiv.style.marginTop = (-r.height / 2) + 'px';
-					valueDiv.style.display = 'none';
-
-					var memoElem = document.createElement("div");
-					memoElem.id = 'memo_r' + iy + 'c' + ix;
-					memoElem.style.fontSize = '12px';
-					memoElem.style.position = 'relative';
-					memoElem.style.top = '100%';
-					memoElem.style.marginTop = '-1em';
-					cell.appendChild(memoElem);
-				}
-			}
-			// Set the margin after contents are initialized
-			table.style.marginLeft = (-table.getBoundingClientRect().width / 2) + 'px';
+			createElements();
 
 			selectCell(null);
 
 			function setOperators(region){
 				operators = [];
-				// Clear the operator indicator before assigning one because
-				// there could be old text from rejected tries.
-				for(var i = 0; i < size * size; i++){
-					var operElem = operElems[i];
-					operElem.innerHTML = '';
-				}
 				for(var i = 1; i < 100; i++){
-					var topLeftCell = null;
-					var top, left;
-					var first;
 					var cellValues = [];
 					iterateCells(function(ix, iy){
 						if(region[ix + iy * size] === i){
-							if(cellValues.length === 0){
-								top = iy;
-								left = ix;
-								topLeftCell = cellElems[ix + iy * size];
-								first = board[ix + iy * size];
-							}
 							cellValues.push(board[ix + iy * size]);
 						}
 					});
@@ -702,10 +793,6 @@
 					else if(oper === '/'){
 						product = cellValues[0] < cellValues[1] ? cellValues[1] / cellValues[0] : cellValues[0] / cellValues[1];
 					}
-					var operElem = operElems[left + top * size];
-					operElem.innerHTML = product + avail[index];
-					operElem.style.position = 'absolute';
-					operElem.style.top = '0px';
 					operators.push({
 						oper: oper,
 						product: product,
@@ -721,75 +808,73 @@
 					continue;
 				region = ret;
 				paintCells(region);
+				setOperatorElems(region);
 				break;
 			}
 
-			var answers = document.createElement('div');
-			container.appendChild(answers);
-			answers.style.fontSize = '25px';
-			answers.style.padding = '10px';
-			answers.innerHTML = 'Ans: ';
-
-			function addAnswer(str){
-				var a = document.createElement('span');
-				answers.appendChild(a);
-				a.innerHTML = str;
-				a.style.marginRight = '10px';
-				a.style.border = '1px solid blue';
-				a.style.padding = '5px';
-				a.onclick = function(){
-					if(selectedCoords){
-						var valueDiv = document.getElementById('r' + selectedCoords[1] + 'c' + selectedCoords[0]);
-						valueDiv.style.display = 'block';
-						valueDiv.innerHTML = this.innerHTML;
-						checkAnswer();
-					}
-				};
-			}
-
-			for(var i = 0; i < size; i++){
-				addAnswer((i + 1).toString());
-			}
-			addAnswer('&nbsp;');
-
-			var memoContainer = document.createElement('div');
-			container.appendChild(memoContainer);
-			memoContainer.style.fontSize = '15px';
-			memoContainer.style.padding = '10px';
-			memoContainer.innerHTML = 'Memo: ';
-			for(var i = 0; i < size; i++){
-				var a = document.createElement('span');
-				memoContainer.appendChild(a);
-				a.innerHTML = (i + 1).toString();
-				a.style.marginRight = '10px';
-				a.style.border = '1px solid blue';
-				a.style.padding = '5px';
-				a.onclick = function(){
-					if(selectedCoords){
-						var memoElem = document.getElementById('memo_r' + selectedCoords[1] + 'c' + selectedCoords[0]);
-						memoElem.style.display = 'block';
-						var currentSet = memos[selectedCoords[0] + selectedCoords[1] * size] || [];
-						var idx = currentSet.indexOf(this.innerHTML);
-						if(0 <= idx)
-							currentSet.splice(idx, 1);
-						else {
-							currentSet.push(this.innerHTML);
-							currentSet.sort();
-						}
-						memos[selectedCoords[0] + selectedCoords[1] * size] = currentSet;
-						memoElem.innerHTML = '';
-						for(var j = 0; j < currentSet.length; j++)
-							memoElem.innerHTML += currentSet[j];
-					}
-				}
-			}
-
-			var debugText = document.createElement('div');
 			debugText.innerHTML = 'labelTries: ' + allTries.toString()
 				+ ', latinSquareTries: ' + latinSquareTries.toString()
 				+ ', solveTries: ' + solveTries;
-			container.appendChild(debugText);
 		};
+
+		function getSaveData(){
+			var storage = localStorage.getItem('WebKenKen');
+			if(!storage)
+				return null;
+			content = JSON.parse(storage);
+			if(content['save'] && content['save']['save'])
+				return content['save']['save'];
+			else
+				return null;
+		}
+
+		function save(){
+			if(!window.localStorage || !window.JSON){
+				alert('Your browser cannot save the game progress.');
+				return;
+			}
+			if(getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
+				return;
+			var saveData = {};
+			saveData.size = size;
+			saveData.answer = [];
+			iterateCells(function(ix, iy){
+				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				saveData.answer[ix + iy * size] = valueDiv.innerHTML;
+			});
+			saveData.board = board;
+			saveData.region = region;
+			saveData.operators = operators;
+			saveData.memos = memos;
+			localStorage.setItem('WebKenKen', JSON.stringify({save: {save: saveData}}));
+		}
+
+		function load(){
+			if(!window.localStorage || !window.JSON){
+				alert('Your browser cannot save the game progress.');
+				return;
+			}
+			var saveData = getSaveData();
+			if(!saveData){
+				alert('There is no saved game');
+				return;
+			}
+			size = saveData.size;
+			board = saveData.board;
+			region = saveData.region;
+			operators = saveData.operators;
+			memos = saveData.memos;
+			createElements();
+			paintCells(region);
+			selectCell(null);
+			setOperatorElems(region);
+			iterateCells(function(ix, iy){
+				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
+				valueDiv.innerHTML = saveData.answer[ix + iy * size];
+				valueDiv.style.display = 'block';
+			});
+			debugText.innerHTML = 'loaded ' + localStorage['WebKenKen'].length + ' bytes';
+		}
 
 		</script>
 
