@@ -192,13 +192,6 @@
 				}
 			}
 
-			/// Check if the region definition has a duplicate row or column,
-			/// in which case it is clear that the problem cannot be solved
-			/// with single answer.  You could swap these rows or columns to
-			/// obtain another solution.
-			/// Not having a duplicate row or column does not mean it is
-			/// solvable, though.  This is dirty heuristic to quickly discard
-			/// obviously bad problems.
 			function checkSolvability(region){
 				function sameVector(a,b){
 					for(var i = 0; i < a.length; i++)
@@ -212,6 +205,11 @@
 						ret.push(region[x + i * size]);
 					return ret;
 				}
+
+				// Check if the region definition has a duplicate row or column,
+				// in which case it is clear that the problem cannot be solved
+				// with single answer.  You could swap these rows or columns to
+				// obtain another solution.
 				for(var iy = 0; iy < size; iy++){
 					var row = region.slice(iy * size, (iy + 1) * size);
 					for(var jy = iy + 1; jy < size; jy++)
@@ -228,8 +226,11 @@
 				genLatinSquare();
 				setOperators(region);
 
+				// Assigning true to this variable enables the debugger to let you see
+				// the process of reducing solution possibilities by step execution.
 				var visualizeSolveProcess = false;
 
+				/// The debug function to visualize the process.
 				function showField(x, y){
 					if(!visualizeSolveProcess)
 						return;
@@ -241,6 +242,11 @@
 							memoElem.innerHTML += (i + 1).toString();
 				}
 
+				// 'field' is an array of bitfields for possibilities.
+				// Using bitfields rather than arrays enables fast operations
+				// (especially cloning) but limits maximum size.
+				// Since JavaScript bitwise operators works with 32 bits,
+				// we're safe to use it as a bitfield for puzzle sizes up to 9.
 				var field = new Array(size * size);
 				for(var iy = 0; iy < size; iy++){
 					for(var ix = 0; ix < size; ix++){
@@ -252,6 +258,15 @@
 					}
 				}
 
+				// From this point, the codes tries to find an answer by reducing
+				// possibilities in each cells.
+				// We do not fully trace all possible combinations, because the
+				// number of combinations are too large to enumerate
+				// (10^9 for a size 6 latin square, according to
+				//  https://en.wikipedia.org/wiki/Latin_square ),
+				// and it's not the method humans normally use.
+				// We only check all combinations in operator partitions, which
+				// humans can do.
 				for(var n = 0; n < 10; n++){
 					var prevField = field.slice(0);
 
