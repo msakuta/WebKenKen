@@ -35,6 +35,8 @@
 		<input type="button" onclick="hide()" value="Hide"></input>
 		<input type="button" onclick="save()" value="Save"></input>
 		<input type="button" onclick="load()" value="Load"></input>
+		<input type="button" onclick="clip()" value="Copy to clipboard"></input>
+		<input type="button" onclick="paste()" value="Paste from clipboard"></input>
 		<hr>
 		<div id="container"></div>
 
@@ -826,13 +828,7 @@
 				return null;
 		}
 
-		function save(){
-			if(!window.localStorage || !window.JSON){
-				alert('Your browser cannot save the game progress.');
-				return;
-			}
-			if(getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
-				return;
+		function prepareSaveData(){
 			var saveData = {};
 			saveData.size = size;
 			saveData.answer = [];
@@ -844,19 +840,20 @@
 			saveData.region = region;
 			saveData.operators = operators;
 			saveData.memos = memos;
-			localStorage.setItem('WebKenKen', JSON.stringify({save: {save: saveData}}));
+			return saveData;
 		}
 
-		function load(){
+		function save(){
 			if(!window.localStorage || !window.JSON){
 				alert('Your browser cannot save the game progress.');
 				return;
 			}
-			var saveData = getSaveData();
-			if(!saveData){
-				alert('There is no saved game');
+			if(getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
 				return;
-			}
+			localStorage.setItem('WebKenKen', JSON.stringify({save: {save: prepareSaveData()}}));
+		}
+
+		function loadSaveData(saveData, length){
 			size = saveData.size;
 			board = saveData.board;
 			region = saveData.region;
@@ -871,7 +868,46 @@
 				valueDiv.innerHTML = saveData.answer[ix + iy * size];
 				valueDiv.style.display = 'block';
 			});
-			debugText.innerHTML = 'loaded ' + localStorage['WebKenKen'].length + ' bytes';
+			debugText.innerHTML = 'loaded ' + length + ' bytes';
+		}
+
+		function load(){
+			if(!window.localStorage || !window.JSON){
+				alert('Your browser cannot save the game progress.');
+				return;
+			}
+			var saveData = getSaveData();
+			if(!saveData){
+				alert('There is no saved game');
+				return;
+			}
+			loadSaveData(saveData, localStorage['WebKenKen'].length);
+		}
+
+		function copyToClipboard(text){
+			window.prompt("Copy to clipboard: Ctrl+C, Enter", text);
+		}
+
+		function clip(){
+			if(!window.JSON){
+				alert('Your browser cannot copy to clibboard.');
+				return;
+			}
+			copyToClipboard(JSON.stringify(prepareSaveData()));
+		}
+
+		function pasteFromClipboard(){
+			return window.prompt("Paste from clipboard: Ctrl+V, Enter");
+		}
+
+		function paste(){
+			if(!window.JSON){
+				alert('Your browser cannot paste from clibboard.');
+				return;
+			}
+			var ret = pasteFromClipboard();
+			if(ret !== null && ret !== '')
+				loadSaveData(JSON.parse(ret), ret.length);
 		}
 
 		</script>
