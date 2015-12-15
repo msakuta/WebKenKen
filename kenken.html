@@ -165,9 +165,10 @@
 					memoElem.style.top = '100%';
 					memoElem.style.marginTop = '-1em';
 					memoElem.innerHTML = '';
-					var currentSet = memos[ix + iy * size] || [];
-					for(var j = 0; j < currentSet.length; j++)
-						memoElem.innerHTML += currentSet[j];
+					var currentSet = memos[ix + iy * size];
+					for(var j = 0; j < size; j++)
+						if(currentSet & (1 << j))
+							memoElem.innerHTML += (j + 1).toString();
 					cell.appendChild(memoElem);
 				}
 			}
@@ -218,18 +219,13 @@
 					if(selectedCoords){
 						var memoElem = document.getElementById('memo_r' + selectedCoords[1] + 'c' + selectedCoords[0]);
 						memoElem.style.display = 'block';
-						var currentSet = memos[selectedCoords[0] + selectedCoords[1] * size] || [];
-						var idx = currentSet.indexOf(this.innerHTML);
-						if(0 <= idx)
-							currentSet.splice(idx, 1);
-						else {
-							currentSet.push(this.innerHTML);
-							currentSet.sort();
-						}
+						var currentSet = memos[selectedCoords[0] + selectedCoords[1] * size];
+						currentSet ^= 1 << (Number(this.innerHTML) - 1);
 						memos[selectedCoords[0] + selectedCoords[1] * size] = currentSet;
 						memoElem.innerHTML = '';
-						for(var j = 0; j < currentSet.length; j++)
-							memoElem.innerHTML += currentSet[j];
+						for(var j = 0; j < size; j++)
+							if(currentSet & (1 << j))
+								memoElem.innerHTML += (j + 1).toString();
 					}
 				}
 			}
@@ -310,7 +306,9 @@
 			size = parseInt(sizeStr);
 			board = new Array(size * size);
 			region = new Array(size * size);
-			memos = new Array(size * size);
+			memos = new Array(size * size); // Bitfield
+			for(var i = 0; i < memos.length; i++) // Initialize with 0
+				memos[i] = 0;
 			operators = [];
 
 			var latinSquareTries = 0;
