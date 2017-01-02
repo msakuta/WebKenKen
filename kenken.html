@@ -38,7 +38,7 @@
 		<input type="button" onclick="paste()" value="Paste from clipboard">
 		<hr>
 		<div id="container"></div>
-
+		<div id="debug">No Errors</div>
 		<script>
 
 // Production steps of ECMA-262, Edition 5, 15.4.4.14
@@ -158,6 +158,7 @@ if (!Array.prototype.indexOf) {
 		}
 		
 		function createElements(){
+		try{
 			cellElems = new Array(size * size);
 			operElems = new Array(size * size);
 
@@ -297,6 +298,10 @@ if (!Array.prototype.indexOf) {
 
 			debugText = document.createElement('div');
 			container.appendChild(debugText);
+			}catch(e){
+				var debug = document.getElemenById("debug");
+				debug.innerHTML = e.what();
+			}
 		}
 
 		function selectCell(sel){
@@ -367,6 +372,7 @@ if (!Array.prototype.indexOf) {
 		}
 
 		function generateBoard(){
+		try{
 			var sizeSelectElement = document.getElementById("sizeSelect");
 			var sizeStr = sizeSelectElement.options[sizeSelectElement.selectedIndex].text;
 			size = parseInt(sizeStr);
@@ -879,6 +885,11 @@ if (!Array.prototype.indexOf) {
 			debugText.innerHTML = 'labelTries: ' + allTries.toString()
 				+ ', latinSquareTries: ' + latinSquareTries.toString()
 				+ ', solveTries: ' + solveTries;
+			}
+			catch(e){
+				var debug = document.getElementById("debug");
+				debug.innerHTML = e.what();
+			}
 		};
 
 		function getSaveData(){
