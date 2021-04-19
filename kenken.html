@@ -881,8 +881,8 @@ if (!Array.prototype.indexOf) {
 				+ ', solveTries: ' + solveTries;
 		};
 
-		function getSaveData(){
-			var storage = localStorage.getItem('WebKenKen');
+		function getSaveData(auto=false){
+			var storage = localStorage.getItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen');
 			if(!storage)
 				return null;
 			content = JSON.parse(storage);
@@ -907,14 +907,15 @@ if (!Array.prototype.indexOf) {
 			return saveData;
 		}
 
-		function save(){
+		function save(auto=false){
 			if(!window.localStorage || !window.JSON){
-				alert('Your browser cannot save the game progress.');
+				if(!auto)
+					alert('Your browser cannot save the game progress.');
 				return;
 			}
-			if(getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
+			if(!auto && getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
 				return;
-			localStorage.setItem('WebKenKen', JSON.stringify({save: {save: prepareSaveData()}}));
+			localStorage.setItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen', JSON.stringify({save: {save: prepareSaveData()}}));
 		}
 
 		function loadSaveData(saveData, length){
@@ -935,18 +936,28 @@ if (!Array.prototype.indexOf) {
 			debugText.innerHTML = 'loaded ' + length + ' bytes';
 		}
 
-		function load(){
+		function load(auto=false){
 			if(!window.localStorage || !window.JSON){
-				alert('Your browser cannot save the game progress.');
+				if(!auto)
+					alert('Your browser cannot save the game progress.');
 				return;
 			}
-			var saveData = getSaveData();
+			var saveData = getSaveData(auto);
 			if(!saveData){
-				alert('There is no saved game');
+				if(!auto)
+					alert('There is no saved game');
 				return;
 			}
-			loadSaveData(saveData, localStorage['WebKenKen'].length);
+			loadSaveData(saveData, localStorage[auto ? 'WebKenKenAutoSave' : 'WebKenKen'].length);
 		}
+
+		window.addEventListener( 'pageshow', function(){
+			load(true);
+		});
+
+		window.addEventListener( 'beforeunload', function(){
+			save(true);
+		});
 
 		function copyToClipboard(text){
 			window.prompt("Copy to clipboard: Ctrl+C, Enter", text);
