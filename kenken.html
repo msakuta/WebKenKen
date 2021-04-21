@@ -15,6 +15,10 @@
 				margin: 0px;
 			}
 
+			.timer {
+				font-size: 150%;
+			}
+
 		</style>
 	</head>
 	<body>
@@ -37,6 +41,7 @@
 		<input type="button" onclick="clip()" value="Copy to clipboard">
 		<input type="button" onclick="paste()" value="Paste from clipboard">
 		<hr>
+		Time: <span id="time" class="timer"></span>s
 		<div id="container"></div>
 
 		<script>
@@ -116,6 +121,10 @@ if (!Array.prototype.indexOf) {
 		var selectedCoords = null;
 		var messageElem;
 		var debugText;
+		var startTime;
+		var finishTime;
+		var spentTime = 0;
+		var gameOver = false;
 
 		function iterateCells(func){
 			for(var iy = 0; iy < size; iy++){
@@ -131,6 +140,8 @@ if (!Array.prototype.indexOf) {
 				valueDiv.innerHTML = board[ix + iy * size];
 				valueDiv.style.display = 'block';
 			});
+			finishTime = Date.now();
+			gameOver = true;
 		}
 
 		function hide(){
@@ -138,6 +149,10 @@ if (!Array.prototype.indexOf) {
 				var valueDiv = document.getElementById('r' + iy + 'c' + ix);
 				valueDiv.style.display = 'none';
 			});
+		}
+
+		function showWinMessage(){
+			messageElem.innerHTML = "Congratulations!<br>You've solved the puzzle!";
 		}
 
 		function checkAnswer(){
@@ -149,12 +164,20 @@ if (!Array.prototype.indexOf) {
 					correct = false;
 			});
 			if(correct){
-				messageElem.innerHTML = "Congratulations!<br>You've solved the puzzle!";
+				showWinMessage();
+				gameOver = true;
+				finishTime = Date.now();
 			}
+		}
+
+		function updateTime(evt){
+			var endTime = gameOver ? finishTime : Date.now();
+			document.getElementById("time").innerHTML = Math.floor((endTime - startTime) / 1000 + spentTime);
 		}
 
 		window.onload = function(){
 			generateBoard();
+			setInterval(updateTime, 1000);
 		}
 		
 		function createElements(){
@@ -376,6 +399,11 @@ if (!Array.prototype.indexOf) {
 			for(var i = 0; i < memos.length; i++) // Initialize with 0
 				memos[i] = 0;
 			operators = [];
+			startTime = Date.now();
+			finishTime = null;
+			spentTime = 0;
+			gameOver = false;
+			updateTime();
 
 			var latinSquareTries = 0;
 
@@ -904,6 +932,11 @@ if (!Array.prototype.indexOf) {
 			saveData.region = region;
 			saveData.operators = operators;
 			saveData.memos = memos;
+			if(gameOver)
+				saveData.spentTime = (finishTime - startTime) / 1000 + spentTime;
+			else
+				saveData.spentTime = (Date.now() - startTime) / 1000 + spentTime;
+			saveData.gameOver = gameOver;
 			return saveData;
 		}
 
@@ -924,6 +957,15 @@ if (!Array.prototype.indexOf) {
 			region = saveData.region;
 			operators = saveData.operators;
 			memos = saveData.memos;
+			gameOver = saveData.gameOver || false;
+			if(gameOver){
+				startTime = finishTime = 0;
+			}
+			else{
+				startTime = Date.now();
+				finishTime = saveData.finishTime || null;
+			}
+			spentTime = saveData.spentTime || 0;
 			createElements();
 			paintCells(region);
 			selectCell(null);
@@ -933,6 +975,9 @@ if (!Array.prototype.indexOf) {
 				valueDiv.innerHTML = saveData.answer[ix + iy * size];
 				valueDiv.style.display = 'block';
 			});
+			updateTime();
+			if(gameOver)
+				showWinMessage();
 			debugText.innerHTML = 'loaded ' + length + ' bytes';
 		}
 
