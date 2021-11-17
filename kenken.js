@@ -66,6 +66,7 @@ var table;
 var size;
 var board;
 var region;
+var cellBorderElems;
 var cellElems;
 var operElems;
 var operators;
@@ -134,6 +135,7 @@ window.onload = function () {
 }
 
 function createElements() {
+    cellBorderElems = new Array(size * size);
     cellElems = new Array(size * size);
     operElems = new Array(size * size);
 
@@ -151,8 +153,8 @@ function createElements() {
     table.style.borderColor = 'red';
     table.style.position = 'relative';
     table.style.left = '50%';
-    table.style.width = (size * 4. + 0.1) + 'em';
-    table.style.height = (size * 4. + 0.1) + 'em';
+    table.style.width = (size * 4. + 0.5) + 'em';
+    table.style.height = (size * 4. + 0.5) + 'em';
 
     messageElem = document.createElement('div');
     container.appendChild(messageElem);
@@ -164,6 +166,16 @@ function createElements() {
     container.appendChild(table);
     for (var iy = 0; iy < size; iy++) {
         for (var ix = 0; ix < size; ix++) {
+            var cellBorder = document.createElement("div");
+            cellBorder.style.width = '3.9em';
+            cellBorder.style.height = '3.9em';
+            cellBorder.style.position = 'absolute';
+            cellBorder.style.top = (4.0 * iy + 0.2) + 'em';
+            cellBorder.style.left = (4.0 * ix + 0.2) + 'em';
+            cellBorder.style.verticalAlign = 'middle';
+            cellBorderElems[ix + iy * size] = cellBorder;
+            table.appendChild(cellBorder);
+
             var cell = document.createElement("div");
             cellElems[ix + iy * size] = cell;
             cell.innerHTML = "";
@@ -171,13 +183,13 @@ function createElements() {
             cell.style.width = '3.5em';
             cell.style.height = '3.5em';
             cell.style.position = 'absolute';
-            cell.style.top = (4.0 * iy + 0.2) + 'em';
-            cell.style.left = (4.0 * ix + 0.2) + 'em';
+            cell.style.top = '0.125em';
+            cell.style.left = '0.125em';
             cell.style.verticalAlign = 'middle';
             cell.onclick = function () {
                 selectCell(this);
             }
-            table.appendChild(cell);
+            cellBorder.appendChild(cell);
 
             var operElem = document.createElement('div');
             operElem.style.position = 'absolute';
@@ -278,12 +290,18 @@ function createElements() {
 function selectCell(sel) {
     selectedCell = sel;
     iterateCells(function (ix, iy) {
-        if (cellElems[ix + iy * size] === sel) {
-            cellElems[ix + iy * size].style.border = '2px blue solid';
+        var cell = cellElems[ix + iy * size];
+        if (cell === sel) {
+            cell.style.top = '0.075em';
+            cell.style.left = '0.075em';
+            cell.style.border = '2px blue solid';
             selectedCoords = [ix, iy];
         }
-        else
-            cellElems[ix + iy * size].style.border = '1px black solid';
+        else {
+            cell.style.top = '0.125em';
+            cell.style.left = '0.125em';
+            cell.style.border = '1px gray solid';
+        }
     })
 }
 
@@ -312,6 +330,31 @@ function paintCells(region) {
     for (var y = 0; y < size; y++) {
         for (var x = 0; x < size; x++) {
             cellElems[x + y * size].style.backgroundColor = colors[region[x + y * size] % colors.length];
+            var cellBorder = cellBorderElems[x + y * size];
+            if (x <= 0 || region[x + y * size] !== region[x - 1 + y * size]) {
+                cellBorder.style.borderLeft = "solid 2px black";
+            }
+            else {
+                cellBorder.style.borderLeft = "solid 2px skyblue";
+            }
+            if (size <= x - 1 || region[x + y * size] !== region[x + 1 + y * size]) {
+                cellBorder.style.borderRight = "solid 2px black";
+            }
+            else {
+                cellBorder.style.borderRight = "solid 2px skyblue";
+            }
+            if (y <= 0 || region[x + y * size] !== region[x + (y - 1) * size]) {
+                cellBorder.style.borderTop = "solid 2px black";
+            }
+            else {
+                cellBorder.style.borderTop = "solid 2px skyblue";
+            }
+            if (size <= y - 1 || region[x + y * size] !== region[x + (y + 1) * size]) {
+                cellBorder.style.borderBottom = "solid 2px black";
+            }
+            else {
+                cellBorder.style.borderBottom = "solid 2px skyblue";
+            }
         }
     }
 }
