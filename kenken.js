@@ -386,6 +386,16 @@ function setOperatorElems(region) {
 }
 
 function generateBoard() {
+    try{
+        generateBoardInt();
+    }
+    catch(e){
+        var debug = document.getElementById("debug");
+        debug.innerHTML = e.what();
+    }
+}
+
+function generateBoardInt() {
     var sizeSelectElement = document.getElementById("sizeSelect");
     var sizeStr = sizeSelectElement.options[sizeSelectElement.selectedIndex].text;
     size = parseInt(sizeStr);
