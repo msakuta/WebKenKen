@@ -23,6 +23,9 @@
     </head>
     <body>
         <h1>WebKenKen</h1>
+        <div>userId: <input type="text" id="userId">
+            <input type="button" id="setUserId" value="Set">
+        </div>
         Size:
         <select id="sizeSelect">
             <option selected>3</option>
@@ -33,18 +36,18 @@
             <option>8</option>
             <option>9</option>
         </select>
-        <input type="button" onclick="generateBoard()" value="Create">
+        <input type="button" id="generateBoard" value="Create">
         <input type="button" onclick="solve()" value="Solve">
         <input type="button" onclick="hide()" value="Hide">
-        <input type="button" onclick="save()" value="Save">
-        <input type="button" onclick="load()" value="Load">
+        <input type="button" id="save" value="Save">
+        <input type="button" id="load" value="Load">
         <input type="button" onclick="clip()" value="Copy to clipboard">
         <input type="button" onclick="paste()" value="Paste from clipboard">
         <hr>
         Time: <span id="time" class="timer"></span>s
         <div id="container"></div>
 
-        <script src="kenken.js"></script>
+        <script type="module" src="kenken.js"></script>
 
     </body>
 </html>

@@ -1,3 +1,23 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-app.js";
+// import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-analytics.js";
+import { getFirestore, collection, getDocs, getDoc, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-firestore.js";
+
+// Initialize Firestore through Firebase
+let firebaseConfig, app, db;
+
+function loadCredentials() {
+    fetch("/credentials.json")
+        .then(doc => doc.json())
+        .then(doc => {
+            firebaseConfig = doc;
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            load(true);
+        });
+}
+
+loadCredentials();
+
 
 // Production steps of ECMA-262, Edition 5, 15.4.4.14
 // Reference: http://es5.github.io/#x15.4.4.14
@@ -118,6 +138,22 @@ function checkAnswer() {
             correct = false;
     });
     if (correct) {
+        if(userId !== "") {
+            const time = Math.floor((endTime - startTime) / 1000 + spentTime);
+            const userDoc = doc(collection(db, "/users"), userId);
+            getDoc(userDoc)
+                .then(doc => {
+                    const highScores = doc.highScores || [];
+                    setDoc(userDoc, {highScores})
+                        .then(function() {
+                            console.log("Document successfully written!");
+                        })
+                        .catch(function(error) {
+                            console.error("Error writing document: ", error);
+                        });
+                });
+        }
+
         showWinMessage();
         gameOver = true;
         finishTime = Date.now();
@@ -247,6 +283,7 @@ function createElements() {
                 valueDiv.style.display = 'block';
                 valueDiv.innerHTML = this.innerHTML;
                 checkAnswer();
+                save(true);
             }
         };
     }
@@ -279,6 +316,7 @@ function createElements() {
                 for (var j = 0; j < size; j++)
                     if (currentSet & (1 << j))
                         memoElem.innerHTML += (j + 1).toString();
+                save(true);
             }
         }
     }
@@ -394,6 +432,8 @@ function generateBoard() {
         debug.innerHTML = e.what();
     }
 }
+
+document.getElementById('generateBoard').addEventListener('click', generateBoard);
 
 function generateBoardInt() {
     var sizeSelectElement = document.getElementById("sizeSelect");
@@ -923,7 +963,7 @@ function getSaveData(auto = false) {
     var storage = localStorage.getItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen');
     if (!storage)
         return null;
-    content = JSON.parse(storage);
+    const content = JSON.parse(storage);
     if (content['save'] && content['save']['save'])
         return content['save']['save'];
     else
@@ -950,6 +990,60 @@ function prepareSaveData() {
     return saveData;
 }
 
+let userId = "";
+const userIdLength = 40; // We assume 40 bytes are long enough for collision avoidance until 16^20 ~ 1.2e24 users.
+
+function randomizeUserId(){
+    userId = "";
+    // This is not cryptographically safe random number, but we'd settle for this
+    // because this application is not serious.
+    for(var i = 0; i < userIdLength; i++)
+        userId += Math.floor(Math.random() * 16).toString(16);
+    localStorage.setItem('WebKenKenUserId', userId);
+    var elem = document.getElementById("userId");
+    if(elem)
+        elem.value = userId;
+    return userId;
+}
+
+
+function loadUserId(){
+	var st = localStorage.getItem('WebKenKenUserId');
+	var ok = false;
+	if(st && typeof st === "string" && st.length === userIdLength){
+		ok = true;
+		userId = st;
+		var elem = document.getElementById("userId");
+		if(elem)
+			elem.value = st;
+		// refreshQRCode();
+	}
+	else{
+		// If the data is not as expected, regenerate random id
+		st = randomizeUserId();
+	}
+    return ok;
+}
+
+function generateUserId(){
+	if(confirm('Are you sure you want to generate a new Id?\n' +
+		'Your long accumulated stats can be lost forever!\n' +
+		'(You can recall your previous stats by entering old user id)')){
+		randomizeUserId();
+		// updateHighScores();
+	}
+}
+
+window.addEventListener('load', () => {
+    if(!loadUserId())
+        generateUserId();
+});
+
+document.getElementById('setUserId').addEventListener('click', () => {
+    userId = document.getElementById('userId').value;
+    localStorage.setItem('WebKenKenUserId', userId);
+});
+
 function save(auto = false) {
     if (!window.localStorage || !window.JSON) {
         if (!auto)
@@ -958,10 +1052,22 @@ function save(auto = false) {
     }
     if (!auto && getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
         return;
-    localStorage.setItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen', JSON.stringify({ save: { save: prepareSaveData() } }));
+    const serialized = JSON.stringify({ save: { save: prepareSaveData() } });
+    localStorage.setItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen', serialized);
+    setDoc(doc(collection(db, "/users"), userId), {save: serialized})
+    .then(function() {
+        console.log("Document successfully written!");
+    })
+    .catch(function(error) {
+        console.error("Error writing document: ", error);
+    });
 }
 
+document.getElementById("save").addEventListener("click", save);
+
 function loadSaveData(saveData, length) {
+    if(!saveData.size)
+        return;
     size = saveData.size;
     board = saveData.board;
     region = saveData.region;
@@ -991,23 +1097,59 @@ function loadSaveData(saveData, length) {
     debugText.innerHTML = 'loaded ' + length + ' bytes';
 }
 
+let unsubscriber = null;
+
 function load(auto = false) {
-    if (!window.localStorage || !window.JSON) {
-        if (!auto)
-            alert('Your browser cannot save the game progress.');
-        return;
-    }
-    var saveData = getSaveData(auto);
-    if (!saveData) {
-        if (!auto)
-            alert('There is no saved game');
-        return;
-    }
-    loadSaveData(saveData, localStorage[auto ? 'WebKenKenAutoSave' : 'WebKenKen'].length);
+    if(unsubscriber)
+        unsubscriber();
+
+    getDoc(doc(collection(db, '/users'), userId))
+        .then(function(doc) {
+            if (doc.exists) {
+                const data = doc.data().save;
+                loadSaveData(JSON.parse(data).save.save, data.length);
+            } else {
+                console.log("No user");
+            }
+            updateHighScores();
+        })
+        .catch(function(error) {
+            console.log("Error : ", error);
+        });
+
+    unsubscriber = onSnapshot(doc(collection(db, '/users'), userId), {
+        next: doc => {
+            if(doc.exists){
+                let data = doc.data().save;
+                loadSaveData(JSON.parse(data).save.save, data.length);
+
+            // When another player than the host plays, try to run an AI if the next player was an AI.
+            // Do not upload the state because it would make infinite loop.
+            // if(this.tryNextMove){
+            //     this.tryNextMove(true);
+            // }
+            }
+        }
+        });
+      
+    // if (!window.localStorage || !window.JSON) {
+    //     if (!auto)
+    //         alert('Your browser cannot save the game progress.');
+    //     return;
+    // }
+    // var saveData = getSaveData(auto);
+    // if (!saveData) {
+    //     if (!auto)
+    //         alert('There is no saved game');
+    //     return;
+    // }
+    // loadSaveData(saveData, localStorage[auto ? 'WebKenKenAutoSave' : 'WebKenKen'].length);
 }
 
+document.getElementById("load").addEventListener("click", load);
+
 window.addEventListener('pageshow', function () {
-    load(true);
+    // load(true);
 });
 
 window.addEventListener('beforeunload', function () {
