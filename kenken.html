@@ -19,6 +19,18 @@
                 font-size: 150%;
             }
 
+            .highScores {
+                margin: 4px;
+                padding: 4px;
+                border: solid 2px;
+            }
+
+            .highScoresSub {
+                margin: 2px;
+                padding: 2px;
+                border: solid 1px;
+            }
+
         </style>
     </head>
     <body>
@@ -46,6 +58,11 @@
         <hr>
         Time: <span id="time" class="timer"></span>s
         <div id="container"></div>
+
+        <div class="highScores">
+            HighScores:
+            <div id="highScores"></div>
+        </div>
 
         <script type="module" src="kenken.js"></script>
 

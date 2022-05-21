@@ -13,6 +13,7 @@ function loadCredentials() {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             load(true);
+            loadHighScores();
         });
 }
 
@@ -99,6 +100,7 @@ var startTime;
 var finishTime;
 var spentTime = 0;
 var gameOver = false;
+var highScores = {};
 
 function iterateCells(func) {
     for (var iy = 0; iy < size; iy++) {
@@ -138,19 +140,26 @@ function checkAnswer() {
             correct = false;
     });
     if (correct) {
-        if(userId !== "") {
+        if(userId !== "" && !gameOver) {
+            const endTime = Date.now();
             const time = Math.floor((endTime - startTime) / 1000 + spentTime);
             const userDoc = doc(collection(db, "/users"), userId);
             getDoc(userDoc)
                 .then(doc => {
-                    const highScores = doc.highScores || [];
-                    setDoc(userDoc, {highScores})
+                    const dbHighScores = doc.exists() ? doc.get("highScores") || {} : {};
+                    const scores = dbHighScores[size] || [];
+                    scores.push(time);
+                    scores.sort();
+                    dbHighScores[size] = scores;
+                    highScores = dbHighScores;
+                    setDoc(userDoc, {highScores}, {merge: true})
                         .then(function() {
                             console.log("Document successfully written!");
                         })
                         .catch(function(error) {
                             console.error("Error writing document: ", error);
                         });
+                    updateHighScores();
                 });
         }
 
@@ -1054,7 +1063,10 @@ function save(auto = false) {
         return;
     const serialized = JSON.stringify({ save: { save: prepareSaveData() } });
     localStorage.setItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen', serialized);
-    setDoc(doc(collection(db, "/users"), userId), {save: serialized})
+    const docRef = doc(collection(db, "/users"), userId);
+    const newDoc = {};
+    newDoc.save = serialized;
+    setDoc(docRef, newDoc, {merge: true})
     .then(function() {
         console.log("Document successfully written!");
     })
@@ -1111,7 +1123,6 @@ function load(auto = false) {
             } else {
                 console.log("No user");
             }
-            updateHighScores();
         })
         .catch(function(error) {
             console.log("Error : ", error);
@@ -1144,6 +1155,42 @@ function load(auto = false) {
     //     return;
     // }
     // loadSaveData(saveData, localStorage[auto ? 'WebKenKenAutoSave' : 'WebKenKen'].length);
+}
+
+function loadHighScores(){
+    getDoc(doc(collection(db, '/users'), userId))
+        .then(function(doc) {
+            if (doc.exists()) {
+                const data = doc.data().highScores;
+                if(data){
+                    highScores = data;
+                    updateHighScores();
+                }
+            } else {
+                console.log("No user");
+            }
+        })
+        .catch(function(error) {
+            console.log("Error : ", error);
+        });
+
+}
+
+function updateHighScores(){
+    const highScoresElem = document.getElementById("highScores");
+    while(highScoresElem.firstChild) highScoresElem.removeChild(highScoresElem.firstChild);
+    for(let size in highScores){
+        const scores = highScores[size];
+        const scoresElem = document.createElement("div");
+        scoresElem.className = 'highScoresSub';
+        scoresElem.innerHTML = `Score of size ${size}`;
+        for(let i = 0; i < scores.length; i++){
+            const entryElem = document.createElement("div");
+            entryElem.innerHTML = `${scores[i]} seconds`;
+            scoresElem.appendChild(entryElem);
+        }
+        highScoresElem.appendChild(scoresElem);
+    }
 }
 
 document.getElementById("load").addEventListener("click", load);
