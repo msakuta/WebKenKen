@@ -351,6 +351,60 @@ function selectCell(sel) {
             cell.style.border = '1px gray solid';
         }
     })
+
+    if(sessionId){
+        setDoc(doc(collection(db, '/sessions'), sessionId), {
+            selected: {
+                [userId]: {
+                    name: userName,
+                    coords: selectedCoords
+                }
+            }
+        }, {merge: true});
+    }
+}
+
+document.getElementById('setUserName').addEventListener('click', () => {
+    userName = document.getElementById('userName').value;
+
+    if(db && userId){
+        setDoc(doc(collection(db, '/users'), userId), {name: userName}, {merge: true});
+    }
+})
+
+function selectCellColor(selectedCoords){
+    const labelContainer = document.getElementById('labelContainer');
+    while(labelContainer.firstChild) labelContainer.removeChild(labelContainer.firstChild);
+    iterateCells(function (ix, iy) {
+        const cell = cellElems[ix + iy * size];
+        let isSelected = false;
+        for (let id in selectedCoords) {
+            const { name, coords } = selectedCoords[id];
+            if (coords && coords[0] === ix && coords[1] === iy){
+                isSelected = true;
+                const cellRect = cell.getBoundingClientRect();
+                const label = document.createElement("div");
+                label.style.position = "absolute";
+                label.style.left = `${cellRect.right}px`;
+                label.style.top = `${cellRect.bottom - 24}px`;
+                label.style.color = "#ffffff";
+                label.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+                label.style.pointerEvents = "none";
+                label.innerHTML = name;
+                labelContainer.appendChild(label);
+            }
+        }
+        if (isSelected) {
+            cell.style.top = '0.075em';
+            cell.style.left = '0.075em';
+            cell.style.border = '2px blue solid';
+        }
+        else {
+            cell.style.top = '0.125em';
+            cell.style.left = '0.125em';
+            cell.style.border = '1px gray solid';
+        }
+    });
 }
 
 function paintCells(region) {
@@ -1012,6 +1066,7 @@ function prepareSaveData() {
 }
 
 let userId = "";
+let userName = "new user";
 let sessionId = null;
 const offlineMode = false;
 
@@ -1058,6 +1113,12 @@ function generateUserId(){
 function initUserId() {
     if(!loadUserId())
         generateUserId();
+
+    getDoc(doc(collection(db, '/users'), userId))
+    .then(doc => {
+        userName = doc.data().name;
+        document.getElementById('userName').value = userName;
+    });
 }
 
 function generateSessionId(){
@@ -1194,12 +1255,16 @@ function newSession(){
     unsubscriber = onSnapshot(doc(collection(db, '/sessions'), sessionId), {
         next: doc => {
             if(doc.exists()){
-                let data = doc.data().save;
-                if(data)
-                    loadSaveData(JSON.parse(data).save.save, data.length);
+                const data = doc.data()
+                const save = data.save;
+                if(save)
+                    loadSaveData(JSON.parse(save).save.save, save.length);
+                if(data.selected){
+                    selectCellColor(data.selected);
+                }
             }
         }
-        });
+    });
 }
 
 let unsubscriber = null;
