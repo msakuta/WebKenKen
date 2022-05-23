@@ -433,9 +433,11 @@ function setOperatorElems(region) {
     }
 }
 
-function generateBoard() {
+function generateBoard(quiet=true) {
     try{
         generateBoardInt();
+        if(sessionId)
+            save(quiet);
     }
     catch(e){
         var debug = document.getElementById("debug");
@@ -443,7 +445,16 @@ function generateBoard() {
     }
 }
 
-document.getElementById('generateBoard').addEventListener('click', generateBoard);
+document.getElementById('generateBoard').addEventListener('click', () => {
+    sessionId = generateSessionId();
+
+    if(unsubscriber)
+        unsubscriber();
+
+    newSession();
+
+    generateBoard(true);
+});
 
 function generateBoardInt() {
     var sizeSelectElement = document.getElementById("sizeSelect");
@@ -1001,7 +1012,7 @@ function prepareSaveData() {
 }
 
 let userId = "";
-const userIdLength = 40; // We assume 40 bytes are long enough for collision avoidance until 16^20 ~ 1.2e24 users.
+let sessionId = null;
 const offlineMode = false;
 
 function randomizeUserId(){
@@ -1036,12 +1047,12 @@ function loadUserId(){
 }
 
 function generateUserId(){
-	if(confirm('Are you sure you want to generate a new Id?\n' +
-		'Your long accumulated stats can be lost forever!\n' +
-		'(You can recall your previous stats by entering old user id)')){
-		randomizeUserId();
-		// updateHighScores();
-	}
+    // if(confirm('Are you sure you want to generate a new Id?\n' +
+    // 	'Your long accumulated stats can be lost forever!\n' +
+    // 	'(You can recall your previous stats by entering old user id)')){
+    randomizeUserId();
+        // updateHighScores();
+    // }
 }
 
 function initUserId() {
@@ -1049,22 +1060,61 @@ function initUserId() {
         generateUserId();
 }
 
+function generateSessionId(){
+    if(offlineMode || !db){
+      return "";
+    }
+    // This is not cryptographically safe random number, but we'd settle for this
+    // because this application is not serious.
+    // At this point the sessionId in users should be initialized.
+    const docRef = doc(collection(db, "/sessions"));
+    setDoc(docRef, {});
+    localStorage.setItem('WebHanabiSessionId', docRef.id);
+    return docRef.id;
+}
+
+
+function loadSessionId(){
+    if(offlineMode || !db){
+        return "";
+    }
+    const params = new URLSearchParams(document.location.search.substring(1));
+    let sessionId = params.get('sessionId');
+    if(sessionId && sessionId.length !== 0){
+        return sessionId;
+    }
+    const st = localStorage.getItem('WebKenKenSessionId');
+    if(st && typeof st === "string" && st.length !== 0){
+        sessionId = st;
+    }
+    else{
+        // If the data is not as expected, regenerate random id
+        sessionId = generateSessionId();
+    }
+    return sessionId;
+}
+
+function saveSessionId(){
+    if(sessionId !== null && sessionId.length !== 0)
+        localStorage.setItem('WebKenKenSessionId', sessionId);
+}
+
 document.getElementById('setUserId').addEventListener('click', () => {
     userId = document.getElementById('userId').value;
     localStorage.setItem('WebKenKenUserId', userId);
 });
 
-function save(auto = false) {
+function save(quiet = false) {
     if (!window.localStorage || !window.JSON) {
-        if (!auto)
+        if (!quiet)
             alert('Your browser cannot save the game progress.');
         return;
     }
-    if (!auto && getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
+    if (!quiet && getSaveData() && !confirm('There is already a saved progress. OK to overwrite?'))
         return;
     const serialized = JSON.stringify({ save: { save: prepareSaveData() } });
-    localStorage.setItem(auto ? 'WebKenKenAutoSave' : 'WebKenKen', serialized);
-    const docRef = doc(collection(db, "/users"), userId);
+    localStorage.setItem(quiet ? 'WebKenKenAutoSave' : 'WebKenKen', serialized);
+    const docRef = doc(collection(db, "/sessions"), sessionId);
     const newDoc = {};
     newDoc.save = serialized;
     setDoc(docRef, newDoc, {merge: true})
@@ -1110,26 +1160,38 @@ function loadSaveData(saveData, length) {
     debugText.innerHTML = 'loaded ' + length + ' bytes';
 }
 
-let unsubscriber = null;
+const sessionUrlElem = document.getElementById("sessionUrlInput");
+const sessionUrlCopyButton = document.getElementById("sessionUrlCopyButton");
+if(sessionUrlCopyButton){
+    sessionUrlCopyButton.addEventListener('click', () => {
+        sessionUrlElem.select();
+        sessionUrlElem.setSelectionRange(0, 99999); /* For mobile devices */
+        document.execCommand("copy");
+        alert("Copied the text: " + sessionUrlElem.value);
+    });
+}
 
-function load(auto = false) {
-    if(unsubscriber)
-        unsubscriber();
+function newSession(){
+    const sessionIdElem = document.getElementById("sessionId");
+    sessionIdElem.value = sessionId;
 
-    getDoc(doc(collection(db, '/users'), userId))
-        .then(function(doc) {
-            if (doc.exists()) {
-                const data = doc.data().save;
-                loadSaveData(JSON.parse(data).save.save, data.length);
-            } else {
-                console.log("No user");
-            }
-        })
-        .catch(function(error) {
-            console.log("Error : ", error);
-        });
+    if(sessionUrlElem)
+        sessionUrlElem.value = `${document.location.origin}${document.location.pathname}?sessionId=${sessionId}`;
 
-    unsubscriber = onSnapshot(doc(collection(db, '/users'), userId), {
+    getDoc(doc(collection(db, '/sessions'), sessionId))
+    .then(function(doc) {
+        if (doc.exists()) {
+            const data = doc.data().save;
+            loadSaveData(JSON.parse(data).save.save, data.length);
+        } else {
+            console.log("No user");
+        }
+    })
+    .catch(function(error) {
+        console.log("Error : ", error);
+    });
+
+    unsubscriber = onSnapshot(doc(collection(db, '/sessions'), sessionId), {
         next: doc => {
             if(doc.exists()){
                 let data = doc.data().save;
@@ -1138,7 +1200,18 @@ function load(auto = false) {
             }
         }
         });
-      
+}
+
+let unsubscriber = null;
+
+function load(auto = false) {
+    if(unsubscriber)
+        unsubscriber();
+
+    sessionId = loadSessionId();
+
+    newSession();
+
     // if (!window.localStorage || !window.JSON) {
     //     if (!auto)
     //         alert('Your browser cannot save the game progress.');
@@ -1196,6 +1269,7 @@ window.addEventListener('pageshow', function () {
 });
 
 window.addEventListener('beforeunload', function () {
+    saveSessionId();
     save(true);
 });
 
