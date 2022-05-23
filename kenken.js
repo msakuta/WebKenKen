@@ -386,7 +386,7 @@ function selectCellColor(selectedCoords){
                 const label = document.createElement("div");
                 label.style.position = "absolute";
                 label.style.left = `${cellRect.left}px`;
-                label.style.top = `${cellRect.bottom - 24}px`;
+                label.style.top = `${cellRect.top + 20}px`;
                 label.style.color = "#ffffff";
                 label.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
                 label.style.pointerEvents = "none";
@@ -1106,6 +1106,7 @@ function generateUserId(){
     // 	'Your long accumulated stats can be lost forever!\n' +
     // 	'(You can recall your previous stats by entering old user id)')){
     randomizeUserId();
+    document.getElementById('userId').value = userId;
         // updateHighScores();
     // }
 }
