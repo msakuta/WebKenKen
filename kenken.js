@@ -12,6 +12,7 @@ function loadCredentials() {
             firebaseConfig = doc;
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
+            initUserId();
             load(true);
             loadHighScores();
         });
@@ -1001,17 +1002,17 @@ function prepareSaveData() {
 
 let userId = "";
 const userIdLength = 40; // We assume 40 bytes are long enough for collision avoidance until 16^20 ~ 1.2e24 users.
+const offlineMode = false;
 
 function randomizeUserId(){
-    userId = "";
-    // This is not cryptographically safe random number, but we'd settle for this
-    // because this application is not serious.
-    for(var i = 0; i < userIdLength; i++)
-        userId += Math.floor(Math.random() * 16).toString(16);
+    if(offlineMode || !db){
+        return "";
+    }
+    const docRef = doc(collection(db, "/users"));
+    const docVal = getDoc(docRef);
+    setDoc(docRef, {name: "new user"});
+    userId = docRef.id;
     localStorage.setItem('WebKenKenUserId', userId);
-    var elem = document.getElementById("userId");
-    if(elem)
-        elem.value = userId;
     return userId;
 }
 
@@ -1019,7 +1020,7 @@ function randomizeUserId(){
 function loadUserId(){
 	var st = localStorage.getItem('WebKenKenUserId');
 	var ok = false;
-	if(st && typeof st === "string" && st.length === userIdLength){
+	if(st && typeof st === "string" && st.length !== 0){
 		ok = true;
 		userId = st;
 		var elem = document.getElementById("userId");
@@ -1043,10 +1044,10 @@ function generateUserId(){
 	}
 }
 
-window.addEventListener('load', () => {
+function initUserId() {
     if(!loadUserId())
         generateUserId();
-});
+}
 
 document.getElementById('setUserId').addEventListener('click', () => {
     userId = document.getElementById('userId').value;
@@ -1117,7 +1118,7 @@ function load(auto = false) {
 
     getDoc(doc(collection(db, '/users'), userId))
         .then(function(doc) {
-            if (doc.exists) {
+            if (doc.exists()) {
                 const data = doc.data().save;
                 loadSaveData(JSON.parse(data).save.save, data.length);
             } else {
@@ -1130,15 +1131,10 @@ function load(auto = false) {
 
     unsubscriber = onSnapshot(doc(collection(db, '/users'), userId), {
         next: doc => {
-            if(doc.exists){
+            if(doc.exists()){
                 let data = doc.data().save;
-                loadSaveData(JSON.parse(data).save.save, data.length);
-
-            // When another player than the host plays, try to run an AI if the next player was an AI.
-            // Do not upload the state because it would make infinite loop.
-            // if(this.tryNextMove){
-            //     this.tryNextMove(true);
-            // }
+                if(data)
+                    loadSaveData(JSON.parse(data).save.save, data.length);
             }
         }
         });
