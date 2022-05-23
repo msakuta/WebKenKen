@@ -385,7 +385,7 @@ function selectCellColor(selectedCoords){
                 const cellRect = cell.getBoundingClientRect();
                 const label = document.createElement("div");
                 label.style.position = "absolute";
-                label.style.left = `${cellRect.right}px`;
+                label.style.left = `${cellRect.left}px`;
                 label.style.top = `${cellRect.bottom - 24}px`;
                 label.style.color = "#ffffff";
                 label.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
