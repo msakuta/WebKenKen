@@ -6,7 +6,7 @@ import { getFirestore, collection, getDocs, getDoc, doc, setDoc, onSnapshot } fr
 let firebaseConfig, app, db;
 
 function loadCredentials() {
-    fetch("/credentials.json")
+    fetch("credentials.json")
         .then(doc => doc.json())
         .then(doc => {
             firebaseConfig = doc;
