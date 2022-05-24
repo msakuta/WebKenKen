@@ -15,6 +15,7 @@ function loadCredentials() {
             initUserId();
             load(true);
             loadHighScores();
+            checkHighScores();
         });
 }
 
@@ -102,6 +103,9 @@ var finishTime;
 var spentTime = 0;
 var gameOver = false;
 var highScores = {};
+let globalHighScores = {};
+const maxHighScores = 20;
+const sizes = ['3', '4', '5', '6', '7', '8', '9'];
 
 function iterateCells(func) {
     for (var iy = 0; iy < size; iy++) {
@@ -150,7 +154,9 @@ function checkAnswer() {
                     const dbHighScores = doc.exists() ? doc.get("highScores") || {} : {};
                     const scores = dbHighScores[size] || [];
                     scores.push(time);
-                    scores.sort();
+                    scores.sort((a, b) => a - b);
+                    if(maxHighScores < scores.length)
+                        scores.length = maxHighScores;
                     dbHighScores[size] = scores;
                     highScores = dbHighScores;
                     setDoc(userDoc, {highScores}, {merge: true})
@@ -162,12 +168,50 @@ function checkAnswer() {
                         });
                     updateHighScores();
                 });
+
+            const scoreRef = doc(collection(db, "/highScores"), size.toString());
+            getDoc(scoreRef)
+                .then(doc => {
+                    const scores = doc.exists() ? doc.get("scores") || [] : [];
+                    scores.push({
+                        userId,
+                        userName,
+                        score: time,
+                    });
+                    scores.sort((a, b) => a.score - b.score);
+                    if(maxHighScores < scores.length)
+                        scores.length = maxHighScores;
+                    globalHighScores[size.toString()] = {scores};
+                    setDoc(scoreRef, {scores}, {merge: true})
+                        .then(function() {
+                            console.log("Document successfully written!");
+                        })
+                        .catch(function(error) {
+                            console.error("Error writing document: ", error);
+                        });
+                    updateGlobalHighScores();
+                })
+                .catch(function(error) {
+                    console.log("Error : ", error);
+                });
         }
 
         showWinMessage();
         gameOver = true;
         finishTime = Date.now();
     }
+}
+
+function checkHighScores(){
+    sizes.forEach(size => {
+        onSnapshot(doc(collection(db, '/highScores'), size), {
+            next: doc => {
+                const scores = doc.exists() ? doc.get("scores") || [] : [];
+                globalHighScores[size] = {scores};
+                updateGlobalHighScores();
+            }
+        });
+    });
 }
 
 function updateTime(evt) {
@@ -1075,7 +1119,6 @@ function randomizeUserId(){
         return "";
     }
     const docRef = doc(collection(db, "/users"));
-    const docVal = getDoc(docRef);
     setDoc(docRef, {name: "new user"});
     userId = docRef.id;
     localStorage.setItem('WebKenKenUserId', userId);
@@ -1309,6 +1352,13 @@ function loadHighScores(){
             console.log("Error : ", error);
         });
 
+    Promise.all(sizes.map(size => getDoc(doc(collection(db, '/highScores'), size))))
+        .then(results => {
+            results.map((res, i) => [res, i])
+                .filter(([res, _]) => res.exists())
+                .forEach(([doc, i]) => globalHighScores[sizes[i]] = doc.data())
+            updateGlobalHighScores();
+        })
 }
 
 function updateHighScores(){
@@ -1322,6 +1372,24 @@ function updateHighScores(){
         for(let i = 0; i < scores.length; i++){
             const entryElem = document.createElement("div");
             entryElem.innerHTML = `${scores[i]} seconds`;
+            scoresElem.appendChild(entryElem);
+        }
+        highScoresElem.appendChild(scoresElem);
+    }
+}
+
+function updateGlobalHighScores(){
+    const highScoresElem = document.getElementById("globalHighScores");
+    while(highScoresElem.firstChild) highScoresElem.removeChild(highScoresElem.firstChild);
+    for(let size in globalHighScores){
+        const scores = globalHighScores[size].scores;
+        const scoresElem = document.createElement("div");
+        scoresElem.className = 'highScoresSub';
+        scoresElem.innerHTML = `Score of size ${size}`;
+        for(let i = 0; i < scores.length; i++){
+            const scoreEntry = scores[i];
+            const entryElem = document.createElement("div");
+            entryElem.innerHTML = `${scoreEntry.userName}: ${scoreEntry.score} seconds`;
             scoresElem.appendChild(entryElem);
         }
         highScoresElem.appendChild(scoresElem);
